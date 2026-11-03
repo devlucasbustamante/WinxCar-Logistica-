@@ -1,5 +1,3 @@
-Aqui está o README atualizado, adaptado para a execução via **Node.js (`npm install`)**, mantendo a estrutura moderna e pronta para o GitHub:
-
 ```markdown
 # 🚚 Sistema de Gestão Logística e ESG
 
@@ -82,7 +80,5 @@ http://localhost:3000
 ## 🎯 5. Conclusão
 
 O desenvolvimento deste sistema uniu a teoria logística à prática de desenvolvimento de software moderno, resultando em uma aplicação funcional, leve e segura. A integração com as metas ESG demonstra o papel da tecnologia na promoção de uma logística sustentável e alinhada às exigências do mercado.
-
-```
 
 ```
