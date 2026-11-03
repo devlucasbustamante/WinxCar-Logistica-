@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block titulo %}Gestão de Viagens{% endblock %}
+
+{% block conteudo %}
+<div class="titulo-linha">
+    <h1 class="titulo-pagina"><i class="fas fa-route"></i> Gestão de Viagens</h1>
+</div>
+
+<!-- FORMULÁRIO DE NOVA VIAGEM INCORPORADO -->
+<section class="card op larga" id="form-viagens" style="margin-bottom: 30px;">
+    <h2><i class="fas fa-plus-circle"></i> Registrar Nova Viagem</h2>
+    {% if not caminhoes or not motoristas or not produtos %}
+    <p class="aviso-vazio"><i class="fas fa-exclamation-triangle"></i> Atenção: Para lançar uma viagem, cadastre antes pelo menos um caminhão, um motorista e um produto na página de Cadastros.</p>
+    {% endif %}
+    
+    <form method="post" action="{{ url_for('nova_viagem') }}" id="form-viagem">
+        <div class="grade-campos">
+            <label>Data <input type="date" name="data" value="{{ hoje }}" required></label>
+            <label>Caminhão
+                <select name="caminhao_id" id="sel-caminhao" required>
+                    <option value="">Selecione</option>
+                    {% for c in caminhoes %}<option value="{{ c.id }}">{{ c.placa|placa }} ({{ c.categoria }})</option>{% endfor %}
+                </select>
+            </label>
+            <label>Motorista
+                <select name="motorista_id" required>
+                    <option value="">Selecione</option>
+                    {% for m in motoristas %}<option value="{{ m.id }}">{{ m.nome }}</option>{% endfor %}
+                </select>
+            </label>
+            <label>Km Inicial <input type="number" name="km_inicial" id="km-ini" min="0" step="any" required></label>
+            <label>Km Final <input type="number" name="km_final" id="km-fim" min="0" step="any" required></label>
+        </div>
+
+        <h4 style="margin-top: 20px;"><i class="fas fa-boxes"></i> Lista de Cargas</h4>
+        <p class="apoio pequeno">Adicione as notas fiscais para esta viagem. O valor é preenchido automaticamente pela tabela de produtos.</p>
+        <div id="cargas"></div>
+        <button class="btn btn-sec" type="button" id="add-carga"><i class="fas fa-plus"></i> Adicionar Nota Fiscal</button>
+
+        <!-- Indicador de Ocupação em Tempo Real -->
+        <div class="ocupacao" id="ocupacao" aria-live="polite">
+            <div class="barra-linha">
+                <span>Peso</span>
+                <div class="barra"><div id="barra-peso"></div></div>
+                <span id="txt-peso">0 kg</span>
+            </div>
+            <div class="barra-linha">
+                <span>Cubagem</span>
+                <div class="barra"><div id="barra-cub"></div></div>
+                <span id="txt-cub">0 m³</span>
+            </div>
+            <p class="aviso-excesso" id="aviso-ocupacao" hidden></p>
+        </div>
+
+        <button class="btn btn-principal" type="submit" style="margin-top: 15px;">Salvar Viagem Completa</button>
+    </form>
+
+    <template id="modelo-carga">
+        <div class="carga">
+            <div class="carga-topo">
+                <strong class="carga-num"></strong>
+                <button type="button" class="btn-x remover"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="grade-campos">
+                <label>Produto
+                    <select name="produto_id" required>
+                        <option value="">Selecione</option>
+                        {% for p in produtos %}<option value="{{ p.id }}">{{ p.nome }}</option>{% endfor %}
+                    </select>
+                </label>
+                <label>NF <input name="nota_fiscal" maxlength="30" required autocomplete="off"></label>
+                <label>Qtd. <input type="number" name="quantidade" min="0" step="any" required></label>
+                <label>Valor NF (R$) <input type="number" name="valor_nf" min="0" step="0.01" placeholder="Auto"></label>
+                <label>Frete (R$) <input type="number" name="valor_frete" min="0" step="0.01" placeholder="0.00"></label>
+            </div>
+            <p class="carga-info"></p>
+        </div>
+    </template>
+    <script type="application/json" id="dados-viagem">{{ dados_js|tojson }}</script>
+</section>
+
+<!-- GRÁFICOS E HISTÓRICO DE VIAGENS -->
+<section class="card op bloco">
+    <div class="titulo-linha">
+        <h2><i class="fas fa-chart-line"></i> Resumo Diário: {{ dia|data_br }}</h2>
+        <form method="get" class="filtro-dia">
+            <label>Filtrar outro dia <input type="date" name="data" value="{{ dia }}" required></label>
+            <button class="btn btn-sec" type="submit">Buscar</button>
+        </form>
+    </div>
+    
+    <div class="kpis">
+        <div class="kpi"><span>Viagens</span><strong>{{ resumo_dia.viagens|num }}</strong></div>
+        <div class="kpi"><span>Km Rodados</span><strong>{{ resumo_dia.km|num(1) }}</strong></div>
+        <div class="kpi"><span>Carga Movida</span><strong>{{ resumo_dia.peso_kg|num }} kg</strong></div>
+        <div class="kpi"><span>Valor Frete (R$)</span><strong>{{ resumo_dia.valor_frete|brl }}</strong></div>
+    </div>
+    
+    {% if grafico.caminhoes.labels %}
+    <div class="graficos">
+        <div class="grafico-caixa">
+            <h3>Km rodados por caminhão</h3>
+            <div class="grafico-area"><canvas id="graficoKm"></canvas></div>
+        </div>
+        <div class="grafico-caixa">
+            <h3>Carga levada por motorista (kg)</h3>
+            <div class="grafico-area"><canvas id="graficoCarga"></canvas></div>
+        </div>
+    </div>
+    {% endif %}
+
+    <h3 style="margin-top:30px;"><i class="fas fa-history"></i> Histórico Recente (30 Viagens)</h3>
+    <div class="tabela-wrap">
+        <table class="com-detalhes">
+            <thead>
+                <tr>
+                    <th>Data</th><th>Caminhão</th><th>Motorista</th><th class="n">Km</th>
+                    <th class="n">Carga (kg)</th><th class="n">NF (R$)</th><th class="n">Frete (R$)</th><th></th>
+                </tr>
+            </thead>
+            {% for v in ultimas %}
+            <tbody>
+                <tr>
+                    <td>{{ v.data|data_br }}</td>
+                    <td><strong>{{ v.placa|placa }}</strong></td>
+                    <td>{{ v.motorista }}</td>
+                    <td class="n">{{ v.km|num(1) }}</td>
+                    <td class="n">{{ v.peso_kg|num }} <span class="pct {{ v.pct_peso|faixa }}">{{ v.pct_peso|num }}%</span></td>
+                    <td class="n">{{ v.valor_nf|brl }}</td>
+                    <td class="n">{{ v.valor_frete|brl }}</td>
+                    <td class="acao">
+                        <form method="post" action="{{ url_for('excluir', tabela='viagens', registro_id=v.id) }}" onsubmit="return confirm('Excluir esta viagem e todas as suas cargas?')">
+                            <button class="btn-x" type="submit"><i class="fas fa-trash-alt"></i></button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+            {% else %}
+            <tbody><tr><td colspan="8" class="vazio">Nenhuma viagem registrada.</td></tr></tbody>
+            {% endfor %}
+        </table>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='viagem.js') }}"></script>
+{% if grafico.caminhoes.labels %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Escondemos os dados do Python aqui para o VS Code não dar erro de sintaxe -->
+<script type="application/json" id="dados-graficos-viagens">
+    {{ grafico|tojson }}
+</script>
+
+<script>
+    if (typeof Chart !== 'undefined') {
+        const dados = JSON.parse(document.getElementById('dados-graficos-viagens').textContent);
+        const opcoes = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
+        
+        new Chart(document.getElementById('graficoKm'), { 
+            type: 'bar', 
+            data: { labels: dados.caminhoes.labels, datasets: [{ data: dados.caminhoes.km, backgroundColor: '#3498db' }] }, 
+            options: opcoes 
+        });
+        
+        new Chart(document.getElementById('graficoCarga'), { 
+            type: 'bar', 
+            data: { labels: dados.motoristas.labels, datasets: [{ data: dados.motoristas.peso, backgroundColor: '#27ae60' }] }, 
+            options: opcoes 
+        });
+    }
+</script>
+{% endif %}
+{% endblock %}

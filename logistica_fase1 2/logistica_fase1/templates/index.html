@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block titulo %}Dashboard Geral{% endblock %}
+
+{% block conteudo %}
+<div class="titulo-linha">
+    <h1 class="titulo-pagina"><i class="fas fa-chart-pie"></i> Visão Geral da Frota</h1>
+    <p class="apoio">Resumo operacional e impacto das metas ESG aplicadas à logística.</p>
+</div>
+
+<!-- Indicadores Principais (KPIs) -->
+<div class="kpis" style="margin-top: 20px;">
+    <div class="kpi" style="border-bottom: 4px solid var(--azul);">
+        <span>Caminhões na Frota</span>
+        <strong><i class="fas fa-truck"></i> {{ totais.caminhoes }}</strong>
+    </div>
+    <div class="kpi" style="border-bottom: 4px solid var(--verde);">
+        <span>Viagens Realizadas</span>
+        <strong><i class="fas fa-map-marked-alt"></i> {{ totais.viagens }}</strong>
+    </div>
+    <div class="kpi" style="border-bottom: 4px solid var(--laranja);">
+        <span>Motoristas Ativos</span>
+        <strong><i class="fas fa-id-card"></i> {{ totais.motoristas }}</strong>
+    </div>
+    <div class="kpi" style="border-bottom: 4px solid var(--vermelho);">
+        <span>Custo de Preventivas</span>
+        <strong><i class="fas fa-wrench"></i> {{ totais.custo_manutencao|brl }}</strong>
+    </div>
+</div>
+
+<h2 class="secao"><i class="fas fa-globe-americas"></i> Metas ESG e ODS Alcançadas</h2>
+<div class="fases">
+    <div class="fase" style="border-color: #4caf50; background: #f2fdf3;">
+        <strong><i class="fas fa-leaf" style="color: #4caf50;"></i> Sustentabilidade Ambiental</strong>
+        <span>Viagens com rotas otimizadas e ocupação máxima de cubagem para menor emissão de carbono por viagem.
+            <br><br>
+            <span class="badge ods3">ODS 3</span>
+            <span class="badge ods13">ODS 13</span>
+        </span>
+    </div>
+    <div class="fase" style="border-color: #2179b5; background: #f0f8ff;">
+        <strong><i class="fas fa-industry" style="color: #2179b5;"></i> Gestão de Manutenção</strong>
+        <span>Checklists preventivos rigorosos garantem a segurança viária e o aumento da vida útil dos pneus e peças.
+            <br><br>
+            <span class="badge ods8">ODS 8</span>
+            <span class="badge ods9">ODS 9</span>
+            <span class="badge ods12">ODS 12</span>
+        </span>
+    </div>
+</div>
+{% endblock %}
