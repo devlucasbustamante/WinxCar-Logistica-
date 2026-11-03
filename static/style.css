@@ -1,0 +1,427 @@
+/* ============================================================
+   PALETA CORPORATIVA MULTINACIONAL
+   ============================================================ */
+:root {
+    /* Primárias */
+    --cor-primaria: #1F3A5F;
+    --cor-primaria-clara: #4A6FA5;
+    --cor-primaria-bg: #E8EFF7;
+
+    /* Secundárias */
+    --cor-sucesso: #2ECC71;
+    --cor-alerta: #F39C12;
+    --cor-erro: #E74C3C;
+
+    /* Neutras */
+    --cinza-escuro: #1F2937;
+    --cinza-medio: #4B5563;
+    --cinza-claro: #F3F4F6;
+    --branco: #FFFFFF;
+
+    /* Bordas */
+    --borda: #D1D5DB;
+
+    /* KPIs */
+    --azul: #1F6FEB;
+    --verde: #2ECC71;
+    --laranja: #F39C12;
+    --vermelho: #E74C3C;
+
+    /* Tipografia */
+    --fonte-corpo: 'Inter', sans-serif;
+    --fonte-titulo: 'Inter', sans-serif;
+
+    /* Fundo e texto */
+    --fundo: #F5F7FA;
+    --texto: #1F2937;
+    --suave: #6B7280;
+
+    /* Tons escuros */
+    --escuro: #1F2937;
+}
+
+/* ============================================================
+   BASE GLOBAL
+   ============================================================ */
+body {
+    margin: 0;
+    background: var(--fundo);
+    color: var(--texto);
+    font-family: var(--fonte-corpo);
+    line-height: 1.45;
+}
+
+input, select, button {
+    font-family: inherit;
+}
+
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible {
+    outline: 3px solid var(--laranja);
+    outline-offset: 2px;
+}
+
+/* ============================================================
+   HEADER MULTINACIONAL
+   ============================================================ */
+.topo {
+    background: var(--cor-primaria);
+    color: #fff;
+    padding: 14px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 24px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+
+    /* faixa estilo estrada */
+    border-bottom: 4px solid transparent;
+    border-image: repeating-linear-gradient(
+        90deg,
+        var(--laranja) 0 26px,
+        transparent 26px 44px
+    ) 1;
+}
+
+.marca {
+    color: #fff;
+    text-decoration: none;
+    font-family: var(--fonte-titulo);
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.topo nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.topo nav a {
+    color: #dfe6e9;
+    text-decoration: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: background .25s;
+}
+
+.topo nav a:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.topo nav a.ativo {
+    background: var(--azul);
+    color: #fff;
+}
+
+/* ============================================================
+   ESTRUTURA DA PÁGINA
+   ============================================================ */
+.pagina {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 20px 64px;
+}
+
+/* ============================================================
+   TÍTULOS E SEÇÕES
+   ============================================================ */
+.titulo-pagina {
+    font-family: var(--fonte-titulo);
+    font-size: 1.7rem;
+    margin: 0 0 4px;
+    color: var(--escuro);
+}
+
+.titulo-linha {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 20px;
+    margin-bottom: 16px;
+}
+
+.apoio {
+    color: var(--suave);
+    margin: 0 0 8px;
+    max-width: 70ch;
+}
+
+.secao {
+    font-family: var(--fonte-titulo);
+    font-size: 1.25rem;
+    margin: 36px 0 14px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--borda);
+    color: var(--escuro);
+}
+
+/* ============================================================
+   MENSAGENS CORPORATIVAS
+   ============================================================ */
+.mensagens {
+    max-width: 1200px;
+    margin: 16px auto 0;
+    padding: 0 20px;
+    display: grid;
+    gap: 8px;
+}
+
+.msg {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    border-left: 5px solid;
+}
+
+.msg-ok {
+    background: #eafaf1;
+    border-color: var(--verde);
+    color: #1e6b41;
+}
+
+.msg-erro {
+    background: #fdedec;
+    border-color: var(--vermelho);
+    color: #922b21;
+}
+
+.msg-aviso {
+    background: #fef5e7;
+    border-color: var(--laranja);
+    color: #7d5200;
+}
+
+/* ============================================================
+   CARDS CORPORATIVOS
+   ============================================================ */
+.grade-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+    gap: 20px;
+    align-items: start;
+}
+
+.card {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-top: 5px solid var(--azul);
+}
+
+.card.cad { border-top-color: var(--azul); }
+.card.op  { border-top-color: var(--verde); }
+.card.man { border-top-color: var(--laranja); }
+
+.card h2, .card h3 {
+    font-family: var(--fonte-titulo);
+    color: #2c3e50;
+    margin: 0 0 14px;
+}
+
+/* ============================================================
+   FORMULÁRIOS
+   ============================================================ */
+label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 12px;
+}
+
+input, select {
+    display: block;
+    width: 100%;
+    margin-top: 5px;
+    padding: 10px;
+    border: 1px solid #b2bec3;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background: #fff;
+    color: var(--texto);
+}
+
+input:focus, select:focus {
+    border-color: var(--azul);
+}
+
+.par {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* ============================================================
+   BOTÕES
+   ============================================================ */
+.btn {
+    display: inline-block;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 11px 16px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    transition: background-color 0.2s;
+}
+
+.btn-principal {
+    background: var(--verde);
+    color: #fff;
+    width: 100%;
+}
+
+.btn-principal:hover {
+    background: #27b765;
+}
+
+.btn-x {
+    background: none;
+    border: none;
+    color: var(--vermelho);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 4px 6px;
+}
+
+/* ============================================================
+   TABELAS CORPORATIVAS
+   ============================================================ */
+.tabela-wrap { overflow-x: auto; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+th, td {
+    padding: 9px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--borda);
+    white-space: nowrap;
+}
+
+th {
+    font-size: 0.82rem;
+    color: var(--suave);
+    font-weight: 600;
+    background: #fafcfc;
+}
+
+td.n, th.n {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   KPIs CORPORATIVOS
+   ============================================================ */
+.kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+}
+
+.kpi {
+    background: var(--cor-primaria-bg);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: grid;
+    gap: 2px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.kpi strong {
+    font-family: var(--fonte-titulo);
+    font-size: 1.2rem;
+    color: var(--escuro);
+}
+
+/* ============================================================
+   RESPONSIVIDADE
+   ============================================================ */
+@media (max-width: 560px) {
+    .topo { padding: 12px 16px; }
+    .pagina { padding: 18px 14px 48px; }
+    .par { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+}
+
+/* ===================== LOGIN ===================== */
+
+.login-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: var(--escuro);
+    margin: 0;
+}
+
+.login-box {
+    background: #fff;
+    padding: 40px 30px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 380px;
+    text-align: center;
+    border-top: 5px solid var(--laranja);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.35);
+}
+
+.login-box h1 {
+    margin-top: 0;
+    font-family: var(--fonte-titulo);
+    color: var(--escuro);
+}
+
+.icone-logo {
+    font-size: 3.5rem;
+    color: var(--azul);
+    margin-bottom: 15px;
+}
+
+.mensagens-login {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.form-login label {
+    display: block;
+    text-align: left;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.form-login input {
+    width: 100%;
+    padding: 12px;
+    font-size: 1.05rem;
+    border-radius: 6px;
+    border: 1px solid var(--borda);
+    margin-top: 6px;
+    margin-bottom: 22px;
+}
+
+.form-login input:focus {
+    border-color: var(--azul);
+}
+
+.form-login button {
+    padding: 12px;
+    font-size: 1.05rem;
+}
+

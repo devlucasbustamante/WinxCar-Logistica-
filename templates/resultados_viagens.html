@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block titulo %}
+Gestão de Viagens
+{% endblock %}
+
+{% block conteudo %}
+
+<h1>Gestão de Viagens</h1>
+<p>Controle completo de rotas, cargas, custos, ocupação e desempenho operacional.</p>
+
+<h2>Registrar Nova Viagem</h2>
+
+{% if not caminhoes or not motoristas or not produtos %}
+<div class="alert alert-warning">
+    Cadastre primeiro caminhão, motorista e produto no módulo Cadastros.
+</div>
+{% endif %}
+
+<form method="POST">
+
+    <label>Data</label>
+    <input type="date" name="data" required>
+
+    <label>Caminhão</label>
+    <select name="caminhao" required>
+        <option value="">Selecione</option>
+        {% for c in caminhoes %}
+        <option value="{{ c.id }}">{{ c.placa|placa }} ({{ c.categoria }})</option>
+        {% endfor %}
+    </select>
+
+    <label>Motorista</label>
+    <select name="motorista" required>
+        <option value="">Selecione</option>
+        {% for m in motoristas %}
+        <option value="{{ m.id }}">{{ m.nome }}</option>
+        {% endfor %}
+    </select>
+
+    <label>Km Inicial</label>
+    <input type="number" name="km_inicial" required>
+
+    <label>Km Final</label>
+    <input type="number" name="km_final" required>
+
+    <label>Destino (Empresa)</label>
+    <input type="text" name="destino">
+
+    <label>Cidade / UF</label>
+    <input type="text" name="cidade_uf">
+
+    <label>Tempo Estimado (horas)</label>
+    <input type="number" name="tempo_estimado">
+
+    <label>Status da Viagem</label>
+    <select name="status">
+        <option>Em rota</option>
+        <option>Finalizada</option>
+        <option>Atrasada</option>
+        <option>Cancelada</option>
+    </select>
+
+    <h3>Lista de Cargas</h3>
+    <p>Adicione as notas fiscais. Valores são preenchidos automaticamente.</p>
+
+    <button type="button" id="addNF">Adicionar Nota Fiscal</button>
+
+    <div id="listaNF"></div>
+
+    <button type="submit" class="btn btn-primary">Salvar Viagem Completa</button>
+
+</form>
+
+<hr>
+
+<h2>Resumo Diário: {{ dia|data_br }}</h2>
+
+<form method="GET">
+    <label>Filtrar outro dia</label>
+    <input type="date" name="dia">
+    <button type="submit">Buscar</button>
+</form>
+
+<div class="resumo">
+    <p>Viagens: {{ resumo_dia.viagens|num }}</p>
+    <p>Km Rodados: {{ resumo_dia.km|num(1) }}</p>
+    <p>Carga Movida: {{ resumo_dia.peso_kg|num }} kg</p>
+    <p>Valor Frete: {{ resumo_dia.valor_frete|brl }}</p>
+</div>
+
+{% if grafico.caminhoes.labels %}
+<h3>Km rodados por caminhão</h3>
+<canvas id="graficoKm"></canvas>
+
+<h3>Carga levada por motorista (kg)</h3>
+<canvas id="graficoCarga"></canvas>
+
+<script id="dados-graficos-viagens" type="application/json">
+    {{ grafico|tojson }}
+</script>
+{% endif %}
+
+<hr>
+
+<h2>Histórico Recente (30 Viagens)</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Data</th>
+            <th>Caminhão</th>
+            <th>Motorista</th>
+            <th>Km</th>
+            <th>Carga (kg)</th>
+            <th>NF (R$)</th>
+            <th>Frete (R$)</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for v in ultimas %}
+        <tr>
+            <td>{{ v.data|data_br }}</td>
+            <td>{{ v.placa|placa }}</td>
+            <td>{{ v.motorista }}</td>
+            <td>{{ v.km|num(1) }}</td>
+            <td>{{ v.peso_kg|num }}</td>
+            <td>{{ v.valor_nf|brl }}</td>
+            <td>{{ v.valor_frete|brl }}</td>
+            <td>{{ v.status_viagem }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="8">Nenhuma viagem registrada.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
+
+{% block scripts %}
+{% if grafico.caminhoes.labels %}
+<script>
+    const dados = JSON.parse(document.getElementById('dados-graficos-viagens').textContent);
+
+    const opcoes = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+    };
+
+    new Chart(document.getElementById('graficoKm'), {
+        type: 'bar',
+        data: {
+            labels: dados.caminhoes.labels,
+            datasets: [{ data: dados.caminhoes.km, backgroundColor: '#3498db' }]
+        },
+        options: opcoes
+    });
+
+    new Chart(document.getElementById('graficoCarga'), {
+        type: 'bar',
+        data: {
+            labels: dados.motoristas.labels,
+            datasets: [{ data: dados.motoristas.peso, backgroundColor: '#27ae60' }]
+        },
+        options: opcoes
+    });
+</script>
+{% endif %}
+{% endblock %}
+

@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block titulo %}Manutenção de Frota{% endblock %}
+
+{% block conteudo %}
+
+<div class="titulo-linha">
+    <h1 class="titulo-pagina"><i class="fas fa-tools"></i> Controle de Manutenção Preventiva</h1>
+    <p class="apoio">Acompanhe custos, fornecedores, peças trocadas e status operacional da frota.</p>
+</div>
+
+<div class="grade-cards">
+
+    <!-- ===================== FORMULÁRIO DE NOVA MANUTENÇÃO ===================== -->
+    <section class="card man bloco" id="form-manutencao">
+        <h2><i class="fas fa-clipboard-check"></i> Registrar Preventiva</h2>
+
+        {% if not caminhoes %}
+        <p class="aviso-vazio">
+            <i class="fas fa-info-circle"></i> Cadastre primeiro um caminhão no módulo "Cadastros".
+        </p>
+        {% endif %}
+
+        <form method="post" action="{{ url_for('nova_manutencao') }}" class="form">
+
+            <div class="par">
+                <label>Data
+                    <input type="date" name="data" value="{{ hoje }}" required>
+                </label>
+
+                <label>Caminhão
+                    <select name="caminhao_id" required>
+                        <option value="">Selecione</option>
+                        {% for c in caminhoes %}
+                        <option value="{{ c.id }}">{{ c.placa|placa }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+
+            <div class="par">
+                <label>Motorista Responsável (opcional)
+                    <select name="motorista_id">
+                        <option value="">Não informar</option>
+                        {% for m in motoristas %}
+                        <option value="{{ m.id }}">{{ m.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label>Peça Trocada ou Revisada
+                    <input name="peca" list="lista-pecas" required maxlength="80"
+                           placeholder="Ex.: Pneu, Pastilha de Freio" autocomplete="off">
+                </label>
+
+                <datalist id="lista-pecas">
+                    {% for p in pecas %}
+                    <option value="{{ p }}">
+                    {% endfor %}
+                </datalist>
+            </div>
+
+            <div class="par">
+                <label>Custo do Serviço (R$)
+                    <input type="number" name="custo" min="0" step="0.01" required>
+                </label>
+
+                <label>Status Operacional
+                    <select name="status" required>
+                        {% for s in status_lista %}
+                        <option value="{{ s }}">{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+
+            <!-- NOVOS CAMPOS -->
+            <div class="par">
+                <label>Número da OS (Ordem de Serviço)
+                    <input name="numero_os" maxlength="30" placeholder="Ex.: OS-2026-001" autocomplete="off">
+                </label>
+
+                <label>Empresa Prestadora
+                    <input name="empresa" maxlength="80" placeholder="Ex.: Mecânica São Lucas" autocomplete="off">
+                </label>
+            </div>
+
+            <button class="btn btn-principal" type="submit">Salvar Lançamento</button>
+        </form>
+    </section>
+
+    <!-- ===================== INDICADORES DE MANUTENÇÃO ===================== -->
+    <section class="card man bloco">
+        <h2><i class="fas fa-chart-line"></i> Indicadores Financeiros</h2>
+
+        <div class="kpis kpis-dashboard">
+
+            <div class="kpi kpi-vermelho">
+                <span>Custo Total da Frota</span>
+                <strong>{{ total_gasto|brl }}</strong>
+            </div>
+
+            <div class="kpi kpi-laranja">
+                <span>Serviços Pendentes</span>
+                <strong>{{ pendentes }}</strong>
+            </div>
+
+            <div class="kpi kpi-azul">
+                <span>Total de Serviços Realizados</span>
+                <strong>{{ lancamentos|length }}</strong>
+            </div>
+
+            <div class="kpi kpi-verde">
+                <span>Fornecedores Diferentes</span>
+                <strong>{{ fornecedores|length }}</strong>
+            </div>
+
+        </div>
+    </section>
+
+</div>
+
+<!-- ===================== HISTÓRICO DE SERVIÇOS ===================== -->
+<section class="card man bloco">
+    <h2><i class="fas fa-list-alt"></i> Relatório de Serviços Lançados</h2>
+
+    <div class="tabela-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Caminhão</th>
+                    <th>Motorista</th>
+                    <th>Peça / Item</th>
+                    <th>Empresa</th>
+                    <th>Nº OS</th>
+                    <th>Status</th>
+                    <th class="n">Custo R$</th>
+                    <th></th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for l in lancamentos %}
+                <tr>
+                    <td>{{ l.data|data_br }}</td>
+                    <td><strong>{{ l.placa|placa }}</strong></td>
+                    <td>{{ l.motorista or '-' }}</td>
+                    <td>{{ l.peca }}</td>
+                    <td>{{ l.empresa or '-' }}</td>
+                    <td>{{ l.numero_os or '-' }}</td>
+
+                    <td>
+                        <span class="status status-{{ l.status|lower }}">
+                            {{ l.status }}
+                        </span>
+                    </td>
+
+                    <td class="n">{{ l.custo|brl }}</td>
+
+                    <td class="acao">
+                        <form method="post"
+                              action="{{ url_for('excluir', tabela='manutencoes', registro_id=l.id) }}"
+                              onsubmit="return confirm('Excluir este serviço?')">
+                            <button class="btn-x"><i class="fas fa-trash-alt"></i></button>
+                        </form>
+                    </td>
+                </tr>
+
+                {% else %}
+                <tr>
+                    <td colspan="9" class="vazio">Nenhuma preventiva lançada ainda.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{% endblock %}

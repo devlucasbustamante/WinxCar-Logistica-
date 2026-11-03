@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block titulo %}Dashboard Geral{% endblock %}
+
+{% block conteudo %}
+
+<div class="titulo-linha">
+    <h1 class="titulo-pagina"><i class="fas fa-chart-pie"></i> Visão Geral da Frota</h1>
+    <p class="apoio">Resumo operacional e impacto das metas ESG aplicadas à logística.</p>
+</div>
+
+<!-- ===================== KPIs ===================== -->
+<div class="kpis kpis-dashboard">
+    <div class="kpi kpi-azul">
+        <span>Caminhões na Frota</span>
+        <strong><i class="fas fa-truck"></i> {{ totais.caminhoes }}</strong>
+    </div>
+
+    <div class="kpi kpi-verde">
+        <span>Viagens Realizadas</span>
+        <strong><i class="fas fa-map-marked-alt"></i> {{ totais.viagens }}</strong>
+    </div>
+
+    <div class="kpi kpi-laranja">
+        <span>Motoristas Ativos</span>
+        <strong><i class="fas fa-id-card"></i> {{ totais.motoristas }}</strong>
+    </div>
+
+    <div class="kpi kpi-vermelho">
+        <span>Custo de Preventivas</span>
+        <strong><i class="fas fa-wrench"></i> {{ totais.custo_manutencao|brl }}</strong>
+    </div>
+</div>
+
+<!-- ===================== ESG / ODS ===================== -->
+<h2 class="secao"><i class="fas fa-globe-americas"></i> Metas ESG e ODS Alcançadas</h2>
+
+<div class="fases fases-dashboard">
+
+    <div class="fase fase-verde">
+        <strong><i class="fas fa-leaf"></i> Sustentabilidade Ambiental</strong>
+        <span>
+            Viagens com rotas otimizadas e ocupação máxima de cubagem para menor emissão de carbono por viagem.
+            <br><br>
+            <span class="badge ods3">ODS 3</span>
+            <span class="badge ods13">ODS 13</span>
+        </span>
+    </div>
+
+    <div class="fase fase-azul">
+        <strong><i class="fas fa-industry"></i> Gestão de Manutenção</strong>
+        <span>
+            Checklists preventivos rigorosos garantem a segurança viária e o aumento da vida útil dos pneus e peças.
+            <br><br>
+            <span class="badge ods8">ODS 8</span>
+            <span class="badge ods9">ODS 9</span>
+            <span class="badge ods12">ODS 12</span>
+        </span>
+    </div>
+
+</div>
+
+{% endblock %}

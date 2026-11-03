@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block titulo %}Painel{% endblock %} • Logística Corporativa</title>
+
+    <!-- CSS principal -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <!-- Ícones profissionais -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Fonte corporativa -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+</head>
+
+<body>
+
+    <!-- ===================== HEADER ===================== -->
+    <header class="topo">
+        <div class="topo-esq">
+            <a class="marca" href="{{ url_for('home') }}">
+                <i class="fas fa-truck-moving"></i>
+                <span>Logística Corporativa</span>
+            </a>
+        </div>
+
+        <nav class="menu">
+            <a href="{{ url_for('home') }}" class="item {{ 'ativo' if request.endpoint == 'home' }}">
+                <i class="fas fa-home"></i> Início
+            </a>
+
+            <a href="{{ url_for('cadastros') }}" class="item {{ 'ativo' if request.endpoint == 'cadastros' }}">
+                <i class="fas fa-folder-plus"></i> Cadastros
+            </a>
+
+            <a href="{{ url_for('viagens_page') }}" class="item {{ 'ativo' if request.endpoint == 'viagens_page' }}">
+                <i class="fas fa-route"></i> Viagens
+            </a>
+
+            <a href="{{ url_for('manutencao_page') }}" class="item {{ 'ativo' if request.endpoint == 'manutencao_page' }}">
+                <i class="fas fa-tools"></i> Manutenção
+            </a>
+
+            <a href="{{ url_for('logout') }}" class="item sair">
+                <i class="fas fa-sign-out-alt"></i> Sair
+            </a>
+        </nav>
+    </header>
+
+    <!-- ===================== MENSAGENS ===================== -->
+    {% with mensagens = get_flashed_messages(with_categories=true) %}
+    {% if mensagens %}
+    <div class="mensagens">
+        {% for categoria, mensagem in mensagens %}
+        <div class="msg msg-{{ categoria }}">{{ mensagem }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- ===================== CONTEÚDO ===================== -->
+    <main class="pagina">
+        {% block conteudo %}{% endblock %}
+    </main>
+
+    <!-- ===================== SCRIPTS ===================== -->
+    {% block scripts %}{% endblock %}
+
+</body>
+</html>
+
+
+

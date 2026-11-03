@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block titulo %}Cadastros Base{% endblock %}
+
+{% block conteudo %}
+
+<div class="titulo-linha">
+    <h1 class="titulo-pagina"><i class="fas fa-folder-plus"></i> Cadastros Base</h1>
+    <p class="apoio">Gerencie a frota, os motoristas e as notas fiscais da operação.</p>
+</div>
+
+<div class="grade-cards">
+
+    <!-- ===================== CAMINHÕES ===================== -->
+    <section class="card cad bloco" id="caminhoes">
+        <h2><i class="fas fa-truck"></i> Caminhões</h2>
+
+        <details class="box-form">
+            <summary><i class="fas fa-plus-circle"></i> Cadastrar Novo Caminhão</summary>
+
+            <form method="post" action="{{ url_for('novo_caminhao') }}" class="form">
+                <label>Placa
+                    <input name="placa" required maxlength="8" placeholder="ABC-1234" autocomplete="off">
+                </label>
+
+                <div class="par">
+                    <label>Potência (cv)
+                        <input type="number" name="potencia_cv" min="1" required>
+                    </label>
+
+                    <label>Nº de eixos
+                        <input type="number" name="eixos" min="2" max="9" required>
+                    </label>
+                </div>
+
+                <label>Categoria
+                    <select name="categoria" required>
+                        <option value="">Selecione</option>
+                        {% for c in categorias %}
+                        <option>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <div class="par">
+                    <label>Capacidade (kg)
+                        <input type="number" name="capacidade_kg" min="1" step="any" required>
+                    </label>
+
+                    <label>Cubagem (m³)
+                        <input type="number" name="cubagem_m3" min="0.1" step="any" required>
+                    </label>
+                </div>
+
+                <button class="btn btn-principal" type="submit">Salvar Caminhão</button>
+            </form>
+        </details>
+
+        <div class="tabela-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Placa</th>
+                        <th>Categoria</th>
+                        <th class="n">Eixos</th>
+                        <th class="n">Capacidade (kg)</th>
+                        <th class="n">Cubagem (m³)</th>
+                        <th></th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for c in caminhoes %}
+                    <tr>
+                        <td><strong>{{ c.placa|placa }}</strong></td>
+                        <td>{{ c.categoria }}</td>
+                        <td class="n">{{ c.eixos }}</td>
+                        <td class="n">{{ c.capacidade_kg|num }}</td>
+                        <td class="n">{{ c.cubagem_m3|num(2) }}</td>
+
+                        <td class="acao">
+                            <form method="post"
+                                  action="{{ url_for('excluir', tabela='caminhoes', registro_id=c.id) }}"
+                                  onsubmit="return confirm('Excluir caminhão?')">
+                                <button class="btn-x"><i class="fas fa-trash-alt"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+
+                    {% else %}
+                    <tr><td colspan="6" class="vazio">Nenhum caminhão cadastrado.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ===================== MOTORISTAS ===================== -->
+    <section class="card cad bloco" id="motoristas">
+        <h2><i class="fas fa-id-card"></i> Motoristas</h2>
+
+        <details class="box-form">
+            <summary><i class="fas fa-plus-circle"></i> Cadastrar Novo Motorista</summary>
+
+            <form method="post" action="{{ url_for('novo_motorista') }}" class="form">
+                <label>Nome Completo
+                    <input name="nome" required maxlength="80" autocomplete="off">
+                </label>
+
+                <label>CNH
+                    <input name="cnh" maxlength="20" autocomplete="off">
+                </label>
+
+                <label>Telefone
+                    <input name="telefone" maxlength="20" inputmode="tel" autocomplete="off">
+                </label>
+
+                <button class="btn btn-principal" type="submit">Salvar Motorista</button>
+            </form>
+        </details>
+
+        <div class="tabela-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>CNH</th>
+                        <th>Telefone</th>
+                        <th></th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for m in motoristas %}
+                    <tr>
+                        <td><strong>{{ m.nome }}</strong></td>
+                        <td>{{ m.cnh or '-' }}</td>
+                        <td>{{ m.telefone or '-' }}</td>
+
+                        <td class="acao">
+                            <form method="post"
+                                  action="{{ url_for('excluir', tabela='motoristas', registro_id=m.id) }}"
+                                  onsubmit="return confirm('Excluir motorista?')">
+                                <button class="btn-x"><i class="fas fa-trash-alt"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+
+                    {% else %}
+                    <tr><td colspan="4" class="vazio">Nenhum motorista cadastrado.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+<!-- ===================== NOTAS FISCAIS ===================== -->
+<section class="card cad bloco" id="notas">
+    <h2><i class="fas fa-file-invoice-dollar"></i> Notas Fiscais</h2>
+
+    <details class="box-form">
+        <summary><i class="fas fa-plus-circle"></i> Cadastrar Nova Nota Fiscal</summary>
+
+        <form method="post" action="{{ url_for('nova_nota') }}" class="form">
+            <label>Número da NF
+                <input name="numero_nf" required maxlength="20" autocomplete="off">
+            </label>
+
+            <label>Descrição da carga
+                <input name="descricao_carga" required maxlength="120" autocomplete="off">
+            </label>
+
+            <label>Peso total (kg)
+                <input type="number" name="peso_total_kg" min="0" step="0.01" required>
+            </label>
+
+            <label>Volume total (m³)
+                <input type="number" name="volume_total_m3" min="0" step="0.001" required>
+            </label>
+
+            <label>Valor total (R$)
+                <input type="number" name="valor_total" min="0" step="0.01" required>
+            </label>
+
+            <button class="btn btn-principal" type="submit">Salvar Nota Fiscal</button>
+        </form>
+    </details>
+
+    <div class="tabela-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Número</th>
+                    <th>Descrição</th>
+                    <th class="n">Peso (kg)</th>
+                    <th class="n">Volume (m³)</th>
+                    <th class="n">Valor (R$)</th>
+                    <th></th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for n in notas_fiscais %}
+                <tr>
+                    <td>{{ n.numero_nf }}</td>
+                    <td>{{ n.descricao_carga }}</td>
+                    <td class="n">{{ n.peso_total_kg|num(2) }}</td>
+                    <td class="n">{{ n.volume_total_m3|num(3) }}</td>
+                    <td class="n">{{ n.valor_total|brl }}</td>
+
+                    <td class="acao">
+                        <form method="post"
+                              action="{{ url_for('excluir', tabela='notas_fiscais', registro_id=n.id) }}"
+                              onsubmit="return confirm('Excluir nota fiscal?')">
+                            <button class="btn-x"><i class="fas fa-trash-alt"></i></button>
+                        </form>
+                    </td>
+                </tr>
+
+                {% else %}
+                <tr><td colspan="6" class="vazio">Nenhuma nota fiscal cadastrada.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{% endblock %}
