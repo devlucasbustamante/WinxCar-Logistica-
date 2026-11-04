@@ -1,8 +1,7 @@
-```markdown
 # 🚚 Sistema de Gestão Logística e ESG
 
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
-![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
@@ -21,7 +20,7 @@ O objetivo principal do projeto foi entregar uma ferramenta robusta, de fácil u
 
 A aplicação foi construída utilizando uma *stack* moderna e enxuta:
 
-* **Backend:** Desenvolvido em **Node.js** com o framework **Express**, garantindo alto desempenho, rotas limpas e facilidade de manutenção.
+* **Backend:** Desenvolvido em **Python** com o micro-framework **Flask**, garantindo alto desempenho, rotas limpas e facilidade de manutenção.
 * **Persistência de Dados:** Uso de **SQLite** para gestão segura do banco de dados local, estruturado com restrições de integridade referencial para prevenir a perda ou corrupção de dados históricos.
 * **Interface (Frontend):** Páginas estruturadas em **HTML5** e estilizadas com **CSS3** responsivo, complementadas por componentes visuais e ícones profissionais.
 * **Segurança:** Módulo de autenticação protegido por sessão e restrição de acesso via senha de administrador.
@@ -36,49 +35,16 @@ A aplicação foi construída utilizando uma *stack* moderna e enxuta:
 
 ---
 
-## 🚀 4. Como Executar o Projeto
+## 📦 4. Portabilidade e Empacotamento (Deploy)
 
-Para executar o projeto localmente, certifique-se de ter o **Node.js** instalado na sua máquina. Siga os passos abaixo:
+Para viabilizar o uso do sistema diretamente via linha de comando, basta ter o **Node.js** e o **npm** instalados. Siga o passo a passo no terminal:
 
-1. Clone o repositório:
+1. **Instalar as dependências do projeto:**
    ```bash
-   git clone [https://github.com/seu-usuario/nome-do-repositorio.git](https://github.com/seu-usuario/nome-do-repositorio.git)
-
-```
-
-2. Entre na pasta do projeto:
-```bash
-cd nome-do-repositorio
-
-```
-
-
-3. Instale as dependências:
-```bash
-npm install
-
-```
-
-
-4. Inicie a aplicação:
-```bash
-npm start
-
-```
-
-
-5. Abra o seu navegador e acesse:
-```text
-http://localhost:3000
-
-```
-
-
+   npm install
 
 ---
 
 ## 🎯 5. Conclusão
 
 O desenvolvimento deste sistema uniu a teoria logística à prática de desenvolvimento de software moderno, resultando em uma aplicação funcional, leve e segura. A integração com as metas ESG demonstra o papel da tecnologia na promoção de uma logística sustentável e alinhada às exigências do mercado.
-
-```
