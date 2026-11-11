@@ -1,100 +1,239 @@
 {% extends "base.html" %}
 
-{% block titulo %}
-Gestão de Viagens
-{% endblock %}
+{% block titulo %}Gestão de Viagens{% endblock %}
 
 {% block conteudo %}
 
-<h1>Gestão de Viagens</h1>
-<p>Controle completo de rotas, cargas, custos, ocupação e desempenho operacional.</p>
-
-<h2>Registrar Nova Viagem</h2>
+<div class="titulo-linha">
+    <h1 class="titulo-pagina"><i class="fas fa-route"></i> Gestão de Viagens</h1>
+    <p class="apoio">Controle completo de rotas, cargas, custos, ocupação e desempenho operacional.</p>
+</div>
 
 {% if not caminhoes or not motoristas or not produtos %}
-<div class="alert alert-warning">
-    Cadastre primeiro caminhão, motorista e produto no módulo Cadastros.
+<div class="msg msg-aviso">
+    <i class="fas fa-info-circle"></i>
+    Cadastre primeiro <strong>caminhão</strong>, <strong>motorista</strong> e <strong>nota fiscal</strong> no módulo Cadastros.
 </div>
 {% endif %}
 
-<form method="POST">
+<!-- ===================== FORMULÁRIO DE NOVA VIAGEM ===================== -->
+<section class="card viagem bloco">
+    <h2><i class="fas fa-plus-circle"></i> Registrar Nova Viagem</h2>
 
-    <label>Data</label>
-    <input type="date" name="data" required>
+    <form method="POST" class="form-viagem">
 
-    <label>Caminhão</label>
-    <select name="caminhao" required>
-        <option value="">Selecione</option>
-        {% for c in caminhoes %}
-        <option value="{{ c.id }}">{{ c.placa|placa }} ({{ c.categoria }})</option>
-        {% endfor %}
-    </select>
+        <!-- ===== Dados da viagem ===== -->
+        <fieldset class="viagem-secao">
+            <legend><i class="fas fa-clipboard-list"></i> Dados da Viagem</legend>
 
-    <label>Motorista</label>
-    <select name="motorista" required>
-        <option value="">Selecione</option>
-        {% for m in motoristas %}
-        <option value="{{ m.id }}">{{ m.nome }}</option>
-        {% endfor %}
-    </select>
+            <div class="viagem-grid">
+                <label>Data
+                    <input type="date" name="data" value="{{ hoje }}" required>
+                </label>
 
-    <label>Km Inicial</label>
-    <input type="number" name="km_inicial" required>
+                <label>Caminhão
+                    <select name="caminhao" id="select-caminhao" required>
+                        <option value="">Selecione</option>
+                        {% for c in caminhoes %}
+                        <option value="{{ c.id }}"
+                                data-capacidade-peso="{{ c.capacidade_kg|default(0) }}"
+                                data-capacidade-cub="{{ c.cubagem_m3|default(0) }}">
+                            {{ c.placa|placa }} ({{ c.categoria }})
+                            — {{ c.capacidade_kg|num }} kg / {{ c.cubagem_m3|num(1) }} m³
+                        </option>
+                        {% endfor %}
+                    </select>
+                </label>
 
-    <label>Km Final</label>
-    <input type="number" name="km_final" required>
+                <label>Motorista
+                    <select name="motorista" required>
+                        <option value="">Selecione</option>
+                        {% for m in motoristas %}
+                        <option value="{{ m.id }}">{{ m.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
 
-    <label>Destino (Empresa)</label>
-    <input type="text" name="destino">
+                <label>Status
+                    <select name="status">
+                        <option>Em rota</option>
+                        <option>Finalizada</option>
+                        <option>Atrasada</option>
+                        <option>Cancelada</option>
+                    </select>
+                </label>
+            </div>
+        </fieldset>
 
-    <label>Cidade / UF</label>
-    <input type="text" name="cidade_uf">
+        <!-- ===== Rota e km ===== -->
+        <fieldset class="viagem-secao">
+            <legend><i class="fas fa-map-marked-alt"></i> Rota e Quilometragem</legend>
 
-    <label>Tempo Estimado (horas)</label>
-    <input type="number" name="tempo_estimado">
+            <div class="viagem-grid">
+                <label>Km Inicial
+                    <input type="number" name="km_inicial" required min="0" step="0.1">
+                </label>
 
-    <label>Status da Viagem</label>
-    <select name="status">
-        <option>Em rota</option>
-        <option>Finalizada</option>
-        <option>Atrasada</option>
-        <option>Cancelada</option>
-    </select>
+                <label>Km Final
+                    <input type="number" name="km_final" required min="0" step="0.1">
+                </label>
 
-    <h3>Lista de Cargas</h3>
-    <p>Adicione as notas fiscais. Valores são preenchidos automaticamente.</p>
+                <label>Destino (Empresa)
+                    <input type="text" name="destino" maxlength="100" placeholder="Ex.: Distribuidora ABC">
+                </label>
 
-    <button type="button" id="addNF">Adicionar Nota Fiscal</button>
+                <label>Cidade / UF
+                    <input type="text" name="cidade_uf" maxlength="60" placeholder="Ex.: São Paulo / SP">
+                </label>
 
-    <div id="listaNF"></div>
+                <label>Tempo Estimado (h)
+                    <input type="number" name="tempo_estimado" min="0" step="0.5">
+                </label>
 
-    <button type="submit" class="btn btn-primary">Salvar Viagem Completa</button>
+                <label>Valor do Frete (R$)
+                    <input type="number" name="valor_frete" min="0" step="0.01" placeholder="0,00">
+                </label>
+            </div>
+        </fieldset>
 
-</form>
+        <!-- ===== Cargas ===== -->
+        <fieldset class="viagem-secao">
+            <legend><i class="fas fa-boxes"></i> Cargas / Notas Fiscais</legend>
+
+            <p class="apoio">Adicione as notas fiscais. Valores são preenchidos automaticamente ao selecionar o produto.</p>
+
+            <div class="cargas-toolbar">
+                <button type="button" id="add-carga" class="btn btn-secundario">
+                    <i class="fas fa-plus"></i> Adicionar Carga
+                </button>
+            </div>
+
+            <div id="cargas" class="cargas-lista"></div>
+
+            <!-- Painel de ocupação -->
+            <div class="ocupacao" id="painel-ocupacao">
+                <div class="ocupacao-linha">
+                    <span><i class="fas fa-weight-hanging"></i> Peso</span>
+                    <strong id="txt-peso">0,0 kg</strong>
+                </div>
+                <div class="barra"><div class="barra-fill" id="barra-peso"></div></div>
+
+                <div class="ocupacao-linha">
+                    <span><i class="fas fa-cube"></i> Cubagem</span>
+                    <strong id="txt-cub">0,000 m³</strong>
+                </div>
+                <div class="barra"><div class="barra-fill" id="barra-cub"></div></div>
+
+                <p id="aviso-ocupacao" class="aviso-ocupacao" hidden></p>
+            </div>
+        </fieldset>
+
+        <!-- Template da carga (usado pelo viagem.js) -->
+        <template id="modelo-carga">
+            <div class="carga">
+                <div class="carga-header">
+                    <strong class="carga-num">Carga</strong>
+                    <button type="button" class="btn-x remover" title="Remover">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+
+                <div class="carga-campos">
+                    <label class="carga-produto">Produto / NF
+                        <select name="produto_id">
+                            <option value="">Selecione o produto</option>
+                            {% for p in produtos %}
+                            <option value="{{ p.id }}">{{ p.numero_nf }} — {{ p.descricao_carga }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+
+                    <label>Quantidade
+                        <input type="number" name="quantidade" min="1" value="1" required>
+                    </label>
+
+                    <label>Valor NF (R$)
+                        <input type="number" name="valor_nf" step="0.01" min="0">
+                    </label>
+                </div>
+
+                <small class="carga-info"></small>
+            </div>
+        </template>
+
+        <!-- Dados JSON para o viagem.js -->
+        <script id="dados-viagem" type="application/json">
+            {
+                "produtos": {{ produtos_json|tojson }},
+                "capacidade_peso": {{ capacidade_peso|tojson }},
+                "capacidade_cub": {{ capacidade_cub|tojson }},
+                "capacidades": {{ capacidades_json|tojson }}
+            }
+        </script>
+
+        <div class="acoes-form">
+            <button type="submit" class="btn btn-principal">
+                <i class="fas fa-save"></i> Salvar Viagem Completa
+            </button>
+        </div>
+    </form>
+</section>
 
 <hr>
 
-<h2>Resumo Diário: {{ dia|data_br }}</h2>
+<!-- ===================== RESUMO DIÁRIO ===================== -->
+<div class="titulo-linha">
+    <h2 class="secao" style="margin:0;border:0;padding:0;">
+        <i class="fas fa-calendar-day"></i> Resumo do Dia: {{ dia|data_br }}
+    </h2>
 
-<form method="GET">
-    <label>Filtrar outro dia</label>
-    <input type="date" name="dia">
-    <button type="submit">Buscar</button>
-</form>
-
-<div class="resumo">
-    <p>Viagens: {{ resumo_dia.viagens|num }}</p>
-    <p>Km Rodados: {{ resumo_dia.km|num(1) }}</p>
-    <p>Carga Movida: {{ resumo_dia.peso_kg|num }} kg</p>
-    <p>Valor Frete: {{ resumo_dia.valor_frete|brl }}</p>
+    <form method="GET" class="filtro-dia">
+        <input type="date" name="dia" value="{{ dia }}">
+        <button type="submit" class="btn btn-secundario">
+            <i class="fas fa-search"></i> Buscar
+        </button>
+    </form>
 </div>
 
-{% if grafico.caminhoes.labels %}
-<h3>Km rodados por caminhão</h3>
-<canvas id="graficoKm"></canvas>
+<div class="kpis kpis-dashboard">
+    <div class="kpi kpi-azul">
+        <span><i class="fas fa-route"></i> Viagens</span>
+        <strong>{{ resumo_dia.viagens|num }}</strong>
+    </div>
 
-<h3>Carga levada por motorista (kg)</h3>
-<canvas id="graficoCarga"></canvas>
+    <div class="kpi kpi-verde">
+        <span><i class="fas fa-road"></i> Km Rodados</span>
+        <strong>{{ resumo_dia.km|num(1) }}</strong>
+    </div>
+
+    <div class="kpi kpi-laranja">
+        <span><i class="fas fa-weight-hanging"></i> Carga Movida</span>
+        <strong>{{ resumo_dia.peso_kg|num }} kg</strong>
+    </div>
+
+    <div class="kpi kpi-vermelho">
+        <span><i class="fas fa-dollar-sign"></i> Valor Frete</span>
+        <strong>{{ resumo_dia.valor_frete|brl }}</strong>
+    </div>
+</div>
+
+<hr>
+
+<!-- ===================== GRÁFICOS ===================== -->
+{% if grafico.caminhoes.labels %}
+<h2 class="secao"><i class="fas fa-chart-bar"></i> Desempenho</h2>
+
+<div class="grade-cards">
+    <div class="card grafico-card">
+        <h3>Km rodados por caminhão</h3>
+        <canvas id="graficoKm"></canvas>
+    </div>
+
+    <div class="card grafico-card">
+        <h3>Carga levada por motorista (kg)</h3>
+        <canvas id="graficoCarga"></canvas>
+    </div>
+</div>
 
 <script id="dados-graficos-viagens" type="application/json">
     {{ grafico|tojson }}
@@ -103,44 +242,61 @@ Gestão de Viagens
 
 <hr>
 
-<h2>Histórico Recente (30 Viagens)</h2>
+<!-- ===================== HISTÓRICO ===================== -->
+<h2 class="secao"><i class="fas fa-history"></i> Histórico Recente (30 Viagens)</h2>
 
-<table>
-    <thead>
-        <tr>
-            <th>Data</th>
-            <th>Caminhão</th>
-            <th>Motorista</th>
-            <th>Km</th>
-            <th>Carga (kg)</th>
-            <th>NF (R$)</th>
-            <th>Frete (R$)</th>
-            <th>Status</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for v in ultimas %}
-        <tr>
-            <td>{{ v.data|data_br }}</td>
-            <td>{{ v.placa|placa }}</td>
-            <td>{{ v.motorista }}</td>
-            <td>{{ v.km|num(1) }}</td>
-            <td>{{ v.peso_kg|num }}</td>
-            <td>{{ v.valor_nf|brl }}</td>
-            <td>{{ v.valor_frete|brl }}</td>
-            <td>{{ v.status_viagem }}</td>
-        </tr>
-        {% else %}
-        <tr>
-            <td colspan="8">Nenhuma viagem registrada.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="tabela-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Caminhão</th>
+                <th>Motorista</th>
+                <th class="n">Km</th>
+                <th class="n">Carga (kg)</th>
+                <th class="n">NF (R$)</th>
+                <th class="n">Frete (R$)</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for v in ultimas %}
+            <tr>
+                <td>{{ v.data|data_br }}</td>
+                <td><strong>{{ v.placa|placa }}</strong></td>
+                <td>{{ v.motorista or '-' }}</td>
+                <td class="n">{{ v.km|num(1) }}</td>
+                <td class="n">{{ v.peso_kg|num }}</td>
+                <td class="n">{{ v.valor_nf|brl }}</td>
+                <td class="n">{{ v.valor_frete|brl }}</td>
+                <td>
+                    <span class="status status-{{ (v.status_viagem or 'em-rota')|slug }}">
+                        {{ v.status_viagem }}
+                    </span>
+                </td>
+                <td class="acao">
+                    <form method="post"
+                          action="{{ url_for('excluir', tabela='viagens', registro_id=v.id) }}"
+                          onsubmit="return confirm('Excluir esta viagem e suas cargas?')">
+                        <button class="btn-x" title="Excluir"><i class="fas fa-trash-alt"></i></button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9" class="vazio">Nenhuma viagem registrada.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
 {% if grafico.caminhoes.labels %}
 <script>
     const dados = JSON.parse(document.getElementById('dados-graficos-viagens').textContent);
@@ -155,7 +311,7 @@ Gestão de Viagens
         type: 'bar',
         data: {
             labels: dados.caminhoes.labels,
-            datasets: [{ data: dados.caminhoes.km, backgroundColor: '#3498db' }]
+            datasets: [{ data: dados.caminhoes.km, backgroundColor: '#1F6FEB' }]
         },
         options: opcoes
     });
@@ -164,11 +320,12 @@ Gestão de Viagens
         type: 'bar',
         data: {
             labels: dados.motoristas.labels,
-            datasets: [{ data: dados.motoristas.peso, backgroundColor: '#27ae60' }]
+            datasets: [{ data: dados.motoristas.peso, backgroundColor: '#2ECC71' }]
         },
         options: opcoes
     });
 </script>
 {% endif %}
-{% endblock %}
 
+<script src="{{ url_for('static', filename='viagem.js') }}"></script>
+{% endblock %}

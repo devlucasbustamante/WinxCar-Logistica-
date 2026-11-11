@@ -1,544 +1,656 @@
-"""Painel de Logística - Fase 1 (Arquitetura com Supabase)"""
-import math
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
-import re
+import sqlite3
+import unicodedata
 from datetime import date, datetime
 from functools import wraps
-from threading import Timer
-import webbrowser
 
-from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
-from dotenv import load_dotenv
-from supabase import create_client, Client
+from flask import (
+    Flask, flash, g, redirect, render_template,
+    request, session, url_for,
+)
 
-load_dotenv()
-from dotenv import load_dotenv
-from supabase import create_client, Client
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "logistica.db")
 
-load_dotenv()
+# Senha e chave vêm do .env; se não existir .env, usa os valores padrão
+SENHA_ADMIN = os.environ.get("SENHA_ADMIN") or "fatec2026"
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "chave-padrao-insegura")
-
-SUPABASE_URL = "https://cuvmgpcttdqhdtlycebn.supabase.co"
-SUPABASE_KEY = "sb_publishable_alJE7NLcKgZJa_9jVsSDzQ_ZAcKHqBn"
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+app.secret_key = os.environ.get("SECRET_KEY") or "chave-local-logistica-fatec-2026"
 
 
-CATEGORIAS = ["VUC", "3/4", "Toco", "Truck", "Bitruck", "Carreta", "Bitrem", "Rodotrem"]
-STATUS_MANUTENCAO = ["Trocado", "Revisado", "Reparado", "Pendente"]
-PECAS_COMUNS = [
-    "Pneu", "Pastilha de freio", "Lona de freio", "Óleo do motor", "Filtro de óleo",
-    "Filtro de ar", "Filtro de combustível", "Correia", "Bateria", "Amortecedor", "Embreagem",
-]
+# ============================================================
+# BANCO (SQLite puro)
+# ============================================================
+def get_db():
+    if "db" not in g:
+        g.db = sqlite3.connect(DB_PATH)
+        g.db.row_factory = sqlite3.Row
+        g.db.execute("PRAGMA foreign_keys = ON")
+    return g.db
 
-class ErroValidacao(Exception):
-    pass
 
-# ---------------------------------------------------------------------------
-# Sistema de Login e Segurança
-# ---------------------------------------------------------------------------
+@app.teardown_appcontext
+def close_db(exception):
+    db = g.pop("db", None)
+    if db is not None:
+        db.close()
+
+
+def init_db():
+    # Sempre roda: "IF NOT EXISTS" cria só o que faltar, então bancos
+    # antigos também recebem as tabelas novas (ex.: viagem_cargas).
+    db = sqlite3.connect(DB_PATH)
+    db.executescript("""
+    CREATE TABLE IF NOT EXISTS caminhoes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        placa TEXT NOT NULL UNIQUE,
+        categoria TEXT,
+        potencia_cv INTEGER,
+        eixos INTEGER,
+        capacidade_kg REAL,
+        cubagem_m3 REAL
+    );
+    CREATE TABLE IF NOT EXISTS motoristas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        cnh TEXT,
+        telefone TEXT
+    );
+    CREATE TABLE IF NOT EXISTS notas_fiscais (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        numero_nf TEXT NOT NULL UNIQUE,
+        descricao_carga TEXT,
+        peso_total_kg REAL,
+        volume_total_m3 REAL,
+        valor_total REAL
+    );
+    CREATE TABLE IF NOT EXISTS viagens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        data TEXT,
+        caminhao_id INTEGER,
+        motorista_id INTEGER,
+        km_inicial REAL,
+        km_final REAL,
+        destino TEXT,
+        cidade_uf TEXT,
+        tempo_estimado REAL,
+        status_viagem TEXT,
+        valor_frete REAL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS manutencoes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        data TEXT,
+        caminhao_id INTEGER,
+        motorista_id INTEGER,
+        peca TEXT,
+        custo REAL,
+        status TEXT,
+        numero_os TEXT,
+        empresa TEXT
+    );
+    -- Cargas (notas fiscais) de cada viagem.
+    -- Peso/cubagem/valor são gravados no momento da viagem (histórico fiel),
+    -- então excluir a NF depois não altera viagens antigas.
+    CREATE TABLE IF NOT EXISTS viagem_cargas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        viagem_id INTEGER NOT NULL REFERENCES viagens(id) ON DELETE CASCADE,
+        nota_id INTEGER,
+        numero_nf TEXT,
+        quantidade REAL,
+        peso_kg REAL,
+        cubagem_m3 REAL,
+        valor_nf REAL
+    );
+    """)
+    db.commit()
+    db.close()
+
+
+init_db()
+
+
+# ============================================================
+# FILTROS JINJA
+# ============================================================
+def _to_float(v, default=0.0):
+    try:
+        if v is None:
+            return default
+        return float(v)
+    except (TypeError, ValueError):
+        return default
+
+
+@app.template_filter("slug")
+def filtro_slug(v):
+    """'Em andamento' -> 'em-andamento', 'Concluído' -> 'concluido' (para classes CSS)."""
+    s = unicodedata.normalize("NFKD", str(v or "")).encode("ascii", "ignore").decode()
+    return "-".join(s.lower().split())
+
+
+@app.template_filter("placa")
+def filtro_placa(v):
+    if not v:
+        return ""
+    s = str(v).replace("-", "").replace(" ", "").upper()
+    if len(s) == 7:
+        return f"{s[:3]}-{s[3:]}"
+    return str(v)
+
+
+@app.template_filter("data_br")
+def filtro_data_br(v):
+    if not v:
+        return ""
+    if isinstance(v, (date, datetime)):
+        return v.strftime("%d/%m/%Y")
+    try:
+        return datetime.strptime(str(v)[:10], "%Y-%m-%d").strftime("%d/%m/%Y")
+    except ValueError:
+        return str(v)
+
+
+@app.template_filter("num")
+def filtro_num(v, casas=0):
+    if v is None:
+        return "0"
+    try:
+        n = float(v)
+    except (TypeError, ValueError):
+        return str(v)
+    fmt = f"{{:,.{int(casas)}f}}"
+    return fmt.format(n).replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+@app.template_filter("brl")
+def filtro_brl(v):
+    try:
+        n = float(v or 0)
+    except (TypeError, ValueError):
+        n = 0
+    s = f"{n:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"R$ {s}"
+
+
+# ============================================================
+# AUTENTICAÇÃO
+# ============================================================
 def login_required(f):
     @wraps(f)
-    def decorated_function(*args, **kwargs):
+    def wrapper(*args, **kwargs):
         if not session.get("logado"):
-            flash("Acesso negado. Por favor, faça login.", "aviso")
             return redirect(url_for("login"))
         return f(*args, **kwargs)
-    return decorated_function
+    return wrapper
 
+
+# ============================================================
+# HELPERS
+# ============================================================
+def _dicts(rows):
+    return [dict(r) for r in rows]
+
+
+def _caminhoes():
+    return _dicts(get_db().execute(
+        "SELECT * FROM caminhoes ORDER BY placa"
+    ).fetchall())
+
+
+def _motoristas():
+    return _dicts(get_db().execute(
+        "SELECT * FROM motoristas ORDER BY nome"
+    ).fetchall())
+
+
+def _notas():
+    return _dicts(get_db().execute(
+        "SELECT * FROM notas_fiscais ORDER BY numero_nf"
+    ).fetchall())
+
+
+# ============================================================
+# ROTAS
+# ============================================================
+
+# 1. Rota Raiz (Força ir para o login ou para o dashboard)
+@app.route("/")
+def raiz():
+    if not session.get("logado"):
+        return redirect(url_for("login"))
+    return redirect(url_for("home"))
+
+
+# 2. Rota de Login (Apenas UMA vez)
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        senha = request.form.get("senha")
-        if senha == "fatec2026":
+        if request.form.get("senha") == SENHA_ADMIN:
             session["logado"] = True
-            flash("Bem-vindo ao Painel de Logística!", "ok")
+            flash("Bem-vindo!", "ok")
             return redirect(url_for("home"))
-        else:
-            flash("Senha incorreta.", "erro")
+        flash("Senha incorreta.", "erro")
     return render_template("login.html")
 
+
+# 3. Rota de Logout
 @app.route("/logout")
 def logout():
     session.clear()
-    flash("Sessão encerrada com segurança.", "ok")
+    flash("Sessão encerrada.", "ok")
     return redirect(url_for("login"))
 
-# ---------------------------------------------------------------------------
-# Funções de validação e utilitários
-# ---------------------------------------------------------------------------
-def texto(valor, campo, max_len=80, obrigatorio=True):
-    t = " ".join((valor or "").split())
-    if obrigatorio and not t:
-        raise ErroValidacao(f"Preencha o campo «{campo}».")
-    if len(t) > max_len:
-        raise ErroValidacao(f"«{campo}» aceita no máximo {max_len} caracteres.")
-    return t
 
-def numero(valor, campo, minimo=0.0, estrito=False):
-    t = (valor or "").strip().replace(",", ".")
-    if not t:
-        raise ErroValidacao(f"Preencha o campo «{campo}».")
-    try:
-        n = float(t)
-    except ValueError:
-        raise ErroValidacao(f"«{campo}» precisa ser um número.")
-    if not math.isfinite(n):
-        raise ErroValidacao(f"«{campo}» tem valor inválido.")
-    if estrito and n <= minimo:
-        raise ErroValidacao(f"«{campo}» precisa ser maior que {minimo:g}.")
-    if not estrito and n < minimo:
-        raise ErroValidacao(f"«{campo}» não pode ser menor que {minimo:g}.")
-    return n
-
-def numero_opcional(valor, campo, padrao):
-    if not (valor or "").strip():
-        return padrao
-    return numero(valor, campo)
-
-def inteiro(valor, campo, minimo=1):
-    n = numero(valor, campo, minimo)
-    if n != int(n):
-        raise ErroValidacao(f"«{campo}» precisa ser inteiro.")
-    return int(n)
-
-def normalizar_placa(valor):
-    placa = re.sub(r"[\s\-]", "", (valor or "").upper())
-    if not re.fullmatch(r"[A-Z]{3}\d[A-Z0-9]\d{2}", placa):
-        raise ErroValidacao("Placa inválida. Use ABC-1234 ou ABC1D23.")
-    return placa
-
-def data_iso(valor, campo="Data"):
-    try:
-        return datetime.strptime((valor or "").strip(), "%Y-%m-%d").date().isoformat()
-    except ValueError:
-        raise ErroValidacao(f"«{campo}» inválida.")
-
-def escolher_opcao(valor, opcoes, campo):
-    if valor not in opcoes:
-        raise ErroValidacao(f"Escolha opção válida em «{campo}».")
-    return valor
-
-def buscar_registro(tabela, valor, rotulo):
-    try:
-        registro_id = int(valor)
-    except (TypeError, ValueError):
-        raise ErroValidacao(f"Escolha {rotulo}.")
-    res = supabase.table(tabela).select("*").eq("id", registro_id).execute()
-    if not res.data:
-        raise ErroValidacao(f"Não encontrei {rotulo}.")
-    return res.data[0]
-
-def fmt_num(valor, casas=0):
-    s = f"{(valor or 0):,.{casas}f}"
-    return s.replace(",", "X").replace(".", ",").replace("X", ".")
-
-@app.template_filter("num")
-def filtro_num(valor, casas=0):
-    return fmt_num(valor, casas)
-
-@app.template_filter("brl")
-def filtro_brl(valor):
-    return "R$ " + fmt_num(valor, 2)
-
-@app.template_filter("placa")
-def filtro_placa(valor):
-    if valor and re.fullmatch(r"[A-Z]{3}\d{4}", valor):
-        return f"{valor[:3]}-{valor[3:]}"
-    return valor
-
-@app.template_filter("data_br")
-def filtro_data_br(valor):
-    try:
-        return datetime.strptime(valor, "%Y-%m-%d").strftime("%d/%m/%Y")
-    except Exception:
-        return valor
-
-@app.template_filter("faixa")
-def filtro_faixa(percentual):
-    if percentual > 100:
-        return "excesso"
-    if percentual >= 90:
-        return "alerta"
-    return "ok"
-
-def percentual(valor, capacidade):
-    return (valor / capacidade * 100) if capacidade else 0.0
-
-def voltar(rota_destino, ancora=""):
-    url = url_for(rota_destino)
-    if ancora:
-        url += "#" + ancora
-    return redirect(url)
-
-# ---------------------------------------------------------------------------
-# Funções de acesso ao Supabase
-# ---------------------------------------------------------------------------
-def buscar_caminhoes():
-    return supabase.table("caminhoes").select("*").order("placa").execute().data or []
-
-def buscar_motoristas():
-    return supabase.table("motoristas").select("*").order("nome").execute().data or []
-
-def buscar_notas():
-    return supabase.table("notas_fiscais").select("*").order("numero_nf").execute().data or []
-
-def buscar_produtos():
-    return supabase.table("produtos").select("*").order("nome").execute().data or []
-
-def buscar_viagens_view(limit=30):
-    return supabase.table("vw_viagens").select("*").order("data", desc=True).limit(limit).execute().data or []
-
-def buscar_manutencoes():
-    return supabase.table("manutencoes").select("*").order("data", desc=True).order("id", desc=True).execute().data or []
-
-# --- 1. ROTA DASHBOARD INICIAL ---
-@app.get("/")
+# 4. Dashboard
+@app.route("/dashboard")
 @login_required
 def home():
-    caminhoes = supabase.table("caminhoes").select("id").execute().data or []
-    motoristas = supabase.table("motoristas").select("id").execute().data or []
-    viagens = supabase.table("viagens").select("id").execute().data or []
-    manutencoes = supabase.table("manutencoes").select("custo").execute().data or []
-
+    db = get_db()
     totais = {
-        "caminhoes": len(caminhoes),
-        "motoristas": len(motoristas),
-        "viagens": len(viagens),
-        "custo_manutencao": sum(m.get("custo", 0) for m in manutencoes),
+        "caminhoes": db.execute("SELECT COUNT(*) FROM caminhoes").fetchone()[0],
+        "viagens": db.execute("SELECT COUNT(*) FROM viagens").fetchone()[0],
+        "motoristas": db.execute("SELECT COUNT(*) FROM motoristas").fetchone()[0],
+        "custo_manutencao": db.execute(
+            "SELECT COALESCE(SUM(custo),0) FROM manutencoes"
+        ).fetchone()[0],
     }
     return render_template("index.html", totais=totais)
 
-# --- 2. ROTA CADASTRAR/LISTAR ENTIDADES ---
-@app.get("/cadastros")
+
+# ---------------- Cadastros ----------------
+@app.route("/cadastros")
 @login_required
 def cadastros():
-    caminhoes = buscar_caminhoes()
-    motoristas = buscar_motoristas()
-    notas_fiscais = buscar_notas()
     return render_template(
         "cadastros.html",
-        caminhoes=caminhoes,
-        motoristas=motoristas,
-        notas_fiscais=notas_fiscais,
-        categorias=CATEGORIAS,
-        status_manutencao=STATUS_MANUTENCAO,
-        pecas_comuns=PECAS_COMUNS
+        caminhoes=_caminhoes(),
+        motoristas=_motoristas(),
+        notas_fiscais=_notas(),
+        categorias=["Truck", "Carreta", "Bitrem", "VUC", "3/4"],
     )
 
-@app.post("/caminhoes")
+
+@app.route("/caminhoes/novo", methods=["POST"])
 @login_required
 def novo_caminhao():
-    f = request.form
+    db = get_db()
     try:
-        placa = normalizar_placa(f.get("placa"))
-        potencia = inteiro(f.get("potencia_cv"), "Potência")
-        eixos = inteiro(f.get("eixos"), "Nº eixos", minimo=2)
-        categoria = escolher_opcao(f.get("categoria"), CATEGORIAS, "Categoria")
-        capacidade = numero(f.get("capacidade_kg"), "Capacidade", estrito=True)
-        cubagem = numero(f.get("cubagem_m3"), "Cubagem", estrito=True)
+        db.execute(
+            "INSERT INTO caminhoes (placa, categoria, potencia_cv, eixos, capacidade_kg, cubagem_m3) "
+            "VALUES (?,?,?,?,?,?)",
+            (
+                request.form["placa"].upper().replace("-", "").strip(),
+                request.form["categoria"],
+                request.form.get("potencia_cv"),
+                request.form.get("eixos"),
+                request.form.get("capacidade_kg"),
+                request.form.get("cubagem_m3"),
+            ),
+        )
+        db.commit()
+        flash("Caminhão cadastrado.", "ok")
+    except sqlite3.IntegrityError:
+        flash("Placa já cadastrada.", "erro")
+    except Exception as e:
+        flash(f"Erro ao cadastrar: {e}", "erro")
+    return redirect(url_for("cadastros"))
 
-        dados = {
-            "placa": placa,
-            "potencia_cv": potencia,
-            "eixos": eixos,
-            "categoria": categoria,
-            "capacidade_kg": capacidade,
-            "cubagem_m3": cubagem,
-        }
-        supabase.table("caminhoes").insert(dados).execute()
-        flash(f"Caminhão {filtro_placa(placa)} cadastrado.", "ok")
-    except Exception as erro:
-        flash(str(erro), "erro")
-    return voltar("cadastros", "caminhoes")
 
-@app.post("/motoristas")
+@app.route("/motoristas/novo", methods=["POST"])
 @login_required
 def novo_motorista():
-    f = request.form
-    try:
-        nome = texto(f.get("nome"), "Nome", 80)
-        cnh = texto(f.get("cnh"), "CNH", 20, False)
-        telefone = texto(f.get("telefone"), "Telefone", 20, False)
+    nome = (request.form.get("nome") or "").strip()
+    if not nome:
+        flash("Informe o nome do motorista.", "erro")
+        return redirect(url_for("cadastros"))
+    db = get_db()
+    db.execute(
+        "INSERT INTO motoristas (nome, cnh, telefone) VALUES (?,?,?)",
+        (nome, request.form.get("cnh"), request.form.get("telefone")),
+    )
+    db.commit()
+    flash("Motorista cadastrado.", "ok")
+    return redirect(url_for("cadastros"))
 
-        dados = {
-            "nome": nome,
-            "cnh": cnh or None,
-            "telefone": telefone or None,
-        }
-        supabase.table("motoristas").insert(dados).execute()
-        flash(f"Motorista {nome} cadastrado.", "ok")
-    except Exception as erro:
-        flash(str(erro), "erro")
-    return voltar("cadastros", "motoristas")
 
-@app.post("/nova_nota")
+@app.route("/notas/nova", methods=["POST"])
 @login_required
 def nova_nota():
-    f = request.form
+    db = get_db()
     try:
-        numero_nf = texto(f.get("numero_nf"), "Número da NF", 20)
-        descricao = texto(f.get("descricao_carga"), "Descrição da carga", 120)
-        peso = numero(f.get("peso_total_kg"), "Peso total", estrito=True)
-        volume = numero(f.get("volume_total_m3"), "Volume total", estrito=True)
-        valor = numero(f.get("valor_total"), "Valor total")
+        db.execute(
+            "INSERT INTO notas_fiscais "
+            "(numero_nf, descricao_carga, peso_total_kg, volume_total_m3, valor_total) "
+            "VALUES (?,?,?,?,?)",
+            (
+                request.form["numero_nf"],
+                request.form["descricao_carga"],
+                request.form.get("peso_total_kg"),
+                request.form.get("volume_total_m3"),
+                request.form.get("valor_total"),
+            ),
+        )
+        db.commit()
+        flash("Nota fiscal cadastrada.", "ok")
+    except sqlite3.IntegrityError:
+        flash("Número de NF já cadastrado.", "erro")
+    return redirect(url_for("cadastros"))
 
-        dados = {
-            "numero_nf": numero_nf,
-            "descricao_carga": descricao,
-            "peso_total_kg": peso,
-            "volume_total_m3": volume,
-            "valor_total": round(valor, 2),
-        }
-        supabase.table("notas_fiscais").insert(dados).execute()
-        flash(f"Nota Fiscal {numero_nf} cadastrada com sucesso.", "ok")
-    except Exception as erro:
-        flash(str(erro), "erro")
-    return voltar("cadastros", "notas")
 
-# ---------------------------------------------------------------------------
-# Rota de Viagens
-# ---------------------------------------------------------------------------
-@app.get("/viagens")
-@login_required
-def viagens_page():
-    try:
-        dia = data_iso(request.args.get("data"))
-    except ErroValidacao:
-        dia = date.today().isoformat()
-
-    caminhoes = buscar_caminhoes()
-    motoristas = buscar_motoristas()
-    produtos = buscar_produtos()
-    ultimas_view = buscar_viagens_view(limit=30)
-
-    capacidade_peso = caminhoes[0]["capacidade_kg"] if caminhoes else 0
-    capacidade_cub = caminhoes[0]["cubagem_m3"] if caminhoes else 0
-
-    produtos_js = {
-        str(p["id"]): {
-            "peso_kg": float(p["peso_kg"]),
-            "cubagem_m3": float(p["cubagem_m3"]),
-            "valor_nf": float(p["valor_nf"]),
-        }
-        for p in produtos
-    }
-
-    dados_js = {
-        "produtos": produtos_js,
-        "capacidade_peso": float(capacidade_peso),
-        "capacidade_cub": float(capacidade_cub),
-    }
-
-    resumo_dia_viagens = [v for v in ultimas_view if v.get("data") == dia]
-    resumo_dia = {
-        "viagens": len(resumo_dia_viagens),
-        "km": sum(v.get("km", 0) for v in resumo_dia_viagens),
-        "peso_kg": sum(v.get("peso_kg", 0) for v in resumo_dia_viagens),
-        "valor_frete": sum(v.get("valor_frete", 0) for v in resumo_dia_viagens),
-    }
-
-    ultimas = []
-    for v in ultimas_view:
-        cap_peso = v.get("capacidade_kg") or 0
-        pct_peso = percentual(v.get("peso_kg", 0), cap_peso) if cap_peso else 0
-        ultimas.append({
-            "id": v["id"],
-            "data": v["data"],
-            "placa": v["placa"],
-            "motorista": v["motorista"],
-            "km": v.get("km", 0),
-            "peso_kg": v.get("peso_kg", 0),
-            "pct_peso": pct_peso,
-            "valor_nf": v.get("valor_nf", 0),
-            "valor_frete": v.get("valor_frete", 0),
-        })
-
-    grafico = {
-        "caminhoes": {"labels": [], "km": []},
-        "motoristas": {"labels": [], "peso": []},
-    }
-
-    return render_template(
-        "viagens_page.html",
-        dia=dia,
-        caminhoes=caminhoes,
-        motoristas=motoristas,
-        produtos=produtos,
-        ultimas=ultimas,
-        resumo_dia=resumo_dia,
-        grafico=grafico,
-        dados_js=dados_js,
-        hoje=date.today().isoformat(),
-    )
-
-@app.post("/viagens")
-@login_required
-def nova_viagem():
-    f = request.form
-    try:
-        data_v = data_iso(f.get("data"))
-        caminhao = buscar_registro("caminhoes", f.get("caminhao_id"), "caminhão")
-        motorista = buscar_registro("motoristas", f.get("motorista_id"), "motorista")
-        km_inicial = numero(f.get("km_inicial"), "Km inicial")
-        km_final = numero(f.get("km_final"), "Km final")
-        if km_final < km_inicial:
-            raise ErroValidacao("Km final menor que inicial.")
-
-        dados_viagem = {
-            "data": data_v,
-            "caminhao_id": caminhao["id"],
-            "motorista_id": motorista["id"],
-            "km_inicial": km_inicial,
-            "km_final": km_final,
-            "destino_empresa": f.get("destino_empresa"),
-            "destino_cidade": f.get("destino_cidade"),
-            "tempo_estimado": numero_opcional(f.get("tempo_estimado"), "Tempo estimado", 0.0),
-            "status_viagem": f.get("status_viagem") or "Concluída",
-        }
-
-        res = supabase.table("viagens").insert(dados_viagem).execute()
-        viagem_id = res.data[0]["id"]
-
-        produtos_ids = f.getlist("produto_id")
-        notas = f.getlist("nota_fiscal")
-        quantidades = f.getlist("quantidade")
-        valores_nf = f.getlist("valor_nf")
-        valores_frete = f.getlist("valor_frete")
-
-        cargas = []
-        for i in range(len(produtos_ids)):
-            if not produtos_ids[i]:
-                continue
-            carga = {
-                "viagem_id": viagem_id,
-                "produto_id": int(produtos_ids[i]),
-                "nota_fiscal": notas[i],
-                "quantidade": float(quantidades[i] or 0),
-                "valor_nf": float(valores_nf[i] or 0),
-                "valor_frete": float(valores_frete[i] or 0),
-            }
-            cargas.append(carga)
-
-        if not cargas:
-            raise ErroValidacao("Informe pelo menos uma carga.")
-
-        supabase.table("cargas").insert(cargas).execute()
-        flash("Viagem salva com sucesso!", "ok")
-    except Exception as erro:
-        flash(str(erro), "erro")
-    return voltar("viagens_page", "form-viagens")
-
-# --- 4. ROTA MANUTENÇÕES ---
-@app.get("/manutencao")
-@login_required
-def manutencao_page():
-    lancamentos_raw = buscar_manutencoes()
-    caminhoes = buscar_caminhoes()
-    motoristas = buscar_motoristas()
-
-    mapa_caminhao = {c["id"]: c for c in caminhoes}
-    mapa_motorista = {m["id"]: m for m in motoristas}
-
-    lancamentos = []
-    for mn in lancamentos_raw:
-        cam = mapa_caminhao.get(mn["caminhao_id"])
-        mot = mapa_motorista.get(mn.get("motorista_id")) if mn.get("motorista_id") else None
-        lancamentos.append({
-            "id": mn["id"],
-            "data": mn["data"],
-            "placa": cam["placa"] if cam else "",
-            "motorista": mot["nome"] if mot else None,
-            "peca": mn["peca"],
-            "custo": mn["custo"],
-            "status": mn["status"],
-        })
-
-    por_caminhao = {}
-    for mn in lancamentos:
-        placa = mn["placa"]
-        if placa not in por_caminhao:
-            por_caminhao[placa] = {"placa": placa, "quantidade": 0, "custo": 0.0}
-        por_caminhao[placa]["quantidade"] += 1
-        por_caminhao[placa]["custo"] += mn["custo"]
-
-    por_caminhao_lista = sorted(por_caminhao.values(), key=lambda x: x["custo"], reverse=True)
-
-    grafico = {
-        "labels": [filtro_placa(r["placa"]) for r in por_caminhao_lista],
-        "custo": [r["custo"] for r in por_caminhao_lista],
-        "quantidade": [r["quantidade"] for r in por_caminhao_lista],
-    }
-
-    total_gasto = sum(r["custo"] for r in lancamentos)
-    pendentes = sum(1 for r in lancamentos if r["status"] == "Pendente")
-
-    return render_template(
-        "manutencao_page.html",
-        lancamentos=lancamentos,
-        por_caminhao=por_caminhao_lista,
-        grafico=grafico,
-        total_gasto=total_gasto,
-        pendentes=pendentes,
-        caminhoes=caminhoes,
-        motoristas=motoristas,
-        hoje=date.today().isoformat(),
-        status_lista=STATUS_MANUTENCAO,
-        pecas=PECAS_COMUNS,
-    )
-
-@app.post("/manutencoes")
-@login_required
-def nova_manutencao():
-    f = request.form
-    try:
-        data_m = data_iso(f.get("data"))
-        caminhao = buscar_registro("caminhoes", f.get("caminhao_id"), "caminhão")
-        mot_id = buscar_registro("motoristas", f.get("motorista_id"), "motorista")["id"] if f.get("motorista_id") else None
-        peca = texto(f.get("peca"), "Peça", 80)
-        custo = numero(f.get("custo"), "Custo")
-        status = escolher_opcao(f.get("status"), STATUS_MANUTENCAO, "Status")
-
-        dados = {
-            "data": data_m,
-            "caminhao_id": caminhao["id"],
-            "motorista_id": mot_id,
-            "peca": peca,
-            "custo": round(custo, 2),
-            "status": status,
-        }
-        supabase.table("manutencoes").insert(dados).execute()
-        flash(f"Preventiva registrada: {peca}.", "ok")
-    except Exception as erro:
-        flash(str(erro), "erro")
-    return voltar("manutencao_page", "form-manutencao")
-
-# --- 5. EXCLUSÃO ---
-DESTINO_EXCLUSAO = {
-    "caminhoes": "cadastros",
-    "motoristas": "cadastros",
-    "notas_fiscais": "cadastros",
-    "viagens": "viagens_page",
-    "manutencoes": "manutencao_page",
-}
-
-@app.post("/excluir/<tabela>/<int:registro_id>")
+@app.route("/excluir/<tabela>/<int:registro_id>", methods=["POST"])
 @login_required
 def excluir(tabela, registro_id):
-    if tabela not in DESTINO_EXCLUSAO:
-        abort(404)
-    try:
-        supabase.table(tabela).delete().eq("id", registro_id).execute()
-        flash("Registro excluído.", "ok")
-    except Exception:
-        flash("Não é possível excluir um item que já possui histórico no sistema.", "erro")
-    return voltar(DESTINO_EXCLUSAO[tabela])
+    destinos = {
+        "caminhoes": "cadastros",
+        "motoristas": "cadastros",
+        "notas_fiscais": "cadastros",
+        "manutencoes": "manutencao_page",
+        "viagens": "viagens_page",
+    }
+    if tabela not in destinos:
+        flash("Tabela inválida.", "erro")
+        return redirect(url_for("home"))
 
-def abrir_navegador():
-    webbrowser.open("http://127.0.0.1:5000")
+    db = get_db()
 
-if __name__ == "__main__":
-    Timer(1, abrir_navegador).start()
-    app.run(debug=True, use_reloader=False, port=5000)
+    # Não deixa apagar caminhão/motorista que já tem viagem ou manutenção,
+    # senão o histórico ficaria com registros "órfãos" (sem placa/nome).
+    vinculos = {
+        "caminhoes": "caminhao_id",
+        "motoristas": "motorista_id",
+    }
+    if tabela in vinculos:
+        col = vinculos[tabela]
+        usos = (
+            db.execute(f"SELECT COUNT(*) FROM viagens WHERE {col} = ?", (registro_id,)).fetchone()[0]
+            + db.execute(f"SELECT COUNT(*) FROM manutencoes WHERE {col} = ?", (registro_id,)).fetchone()[0]
+        )
+        if usos:
+            flash(
+                "Não é possível excluir: existem viagens ou manutenções ligadas a este registro. "
+                "Exclua-as primeiro.", "erro",
+            )
+            return redirect(url_for(destinos[tabela]))
+
+    if tabela == "viagens":
+        db.execute("DELETE FROM viagem_cargas WHERE viagem_id = ?", (registro_id,))
+    db.execute(f"DELETE FROM {tabela} WHERE id = ?", (registro_id,))
+    db.commit()
+    flash("Registro excluído.", "ok")
+    return redirect(url_for(destinos[tabela]))
+
+
+# ---------------- Viagens ----------------
+def _salvar_viagem(db):
+    """Valida e grava a viagem + suas cargas (notas fiscais)."""
+    f = request.form
+    voltar = redirect(url_for("viagens_page"))
+
+    caminhao = db.execute(
+        "SELECT * FROM caminhoes WHERE id = ?", (f.get("caminhao"),)
+    ).fetchone()
+    motorista = db.execute(
+        "SELECT id FROM motoristas WHERE id = ?", (f.get("motorista"),)
+    ).fetchone()
+    if not caminhao or not motorista:
+        flash("Selecione um caminhão e um motorista válidos.", "erro")
+        return voltar
+
+    km_i = _to_float(f.get("km_inicial"))
+    km_f = _to_float(f.get("km_final"))
+    if km_f < km_i:
+        flash("O km final não pode ser menor que o km inicial.", "erro")
+        return voltar
+
+    # Cada bloco de carga envia produto_id, quantidade e valor_nf (listas paralelas)
+    notas = {str(n["id"]): n for n in _notas()}
+    cargas = []
+    for prod_id, qtd, valor in zip(
+        f.getlist("produto_id"), f.getlist("quantidade"), f.getlist("valor_nf")
+    ):
+        if not prod_id:
+            continue
+        nota = notas.get(prod_id)
+        qtd = _to_float(qtd)
+        if not nota or qtd <= 0:
+            flash("Há uma carga com nota fiscal ou quantidade inválida.", "erro")
+            return voltar
+        cargas.append({
+            "nota_id": nota["id"],
+            "numero_nf": nota["numero_nf"],
+            "quantidade": qtd,
+            "peso_kg": _to_float(nota["peso_total_kg"]) * qtd,
+            "cubagem_m3": _to_float(nota["volume_total_m3"]) * qtd,
+            "valor_nf": _to_float(valor, _to_float(nota["valor_total"])),
+        })
+
+    if not cargas:
+        flash("Adicione pelo menos uma carga (nota fiscal) à viagem.", "erro")
+        return voltar
+
+    # Verificação de capacidade também no servidor (não só na tela)
+    peso = sum(c["peso_kg"] for c in cargas)
+    cub = sum(c["cubagem_m3"] for c in cargas)
+    cap_peso = _to_float(caminhao["capacidade_kg"])
+    cap_cub = _to_float(caminhao["cubagem_m3"])
+    if (cap_peso and peso > cap_peso) or (cap_cub and cub > cap_cub):
+        flash(
+            f"Capacidade excedida: {filtro_num(peso)} kg / {filtro_num(cub, 2)} m³ "
+            f"para um caminhão de {filtro_num(cap_peso)} kg / {filtro_num(cap_cub, 2)} m³.",
+            "erro",
+        )
+        return voltar
+
+    cur = db.execute(
+        "INSERT INTO viagens (data, caminhao_id, motorista_id, km_inicial, km_final, "
+        "destino, cidade_uf, tempo_estimado, status_viagem, valor_frete) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (
+            f.get("data"),
+            caminhao["id"],
+            motorista["id"],
+            km_i,
+            km_f,
+            f.get("destino"),
+            f.get("cidade_uf"),
+            f.get("tempo_estimado") or None,
+            f.get("status"),
+            _to_float(f.get("valor_frete")),
+        ),
+    )
+    viagem_id = cur.lastrowid
+    db.executemany(
+        "INSERT INTO viagem_cargas (viagem_id, nota_id, numero_nf, quantidade, "
+        "peso_kg, cubagem_m3, valor_nf) VALUES (?,?,?,?,?,?,?)",
+        [
+            (viagem_id, c["nota_id"], c["numero_nf"], c["quantidade"],
+             c["peso_kg"], c["cubagem_m3"], c["valor_nf"])
+            for c in cargas
+        ],
+    )
+    db.commit()
+    flash(f"Viagem registrada com {len(cargas)} carga(s).", "ok")
+    return redirect(url_for("viagens_page", dia=f.get("data")))
+
+
+@app.route("/viagens", methods=["GET", "POST"])
+@login_required
+def viagens_page():
+    db = get_db()
+
+    if request.method == "POST":
+        return _salvar_viagem(db)
+
+    dia = request.args.get("dia") or date.today().isoformat()
+
+    # Soma das cargas por viagem (subconsulta evita contar a viagem em dobro)
+    cargas_por_viagem = (
+        "SELECT viagem_id, SUM(peso_kg) AS peso_kg, SUM(valor_nf) AS valor_nf "
+        "FROM viagem_cargas GROUP BY viagem_id"
+    )
+
+    resumo_row = db.execute(
+        f"""
+        SELECT COUNT(*) AS viagens,
+               COALESCE(SUM(v.km_final - v.km_inicial), 0) AS km,
+               COALESCE(SUM(vc.peso_kg), 0) AS peso_kg,
+               COALESCE(SUM(v.valor_frete), 0) AS valor_frete
+        FROM viagens v
+        LEFT JOIN ({cargas_por_viagem}) vc ON vc.viagem_id = v.id
+        WHERE v.data = ?
+        """, (dia,)
+    ).fetchone()
+    resumo_dia = dict(resumo_row)
+
+    ultimas = _dicts(db.execute(
+        f"""
+        SELECT v.id, v.data, v.km_final - v.km_inicial AS km,
+               COALESCE(vc.peso_kg, 0) AS peso_kg,
+               COALESCE(vc.valor_nf, 0) AS valor_nf,
+               v.valor_frete, v.status_viagem, v.destino, v.cidade_uf,
+               c.placa, m.nome AS motorista
+        FROM viagens v
+        LEFT JOIN ({cargas_por_viagem}) vc ON vc.viagem_id = v.id
+        LEFT JOIN caminhoes c ON c.id = v.caminhao_id
+        LEFT JOIN motoristas m ON m.id = v.motorista_id
+        ORDER BY v.data DESC, v.id DESC
+        LIMIT 30
+        """
+    ).fetchall())
+
+    km_por_caminhao = db.execute(
+        """
+        SELECT c.placa, SUM(v.km_final - v.km_inicial) AS km
+        FROM viagens v JOIN caminhoes c ON c.id = v.caminhao_id
+        GROUP BY c.id ORDER BY km DESC
+        """
+    ).fetchall()
+    peso_por_motorista = db.execute(
+        f"""
+        SELECT m.nome, COALESCE(SUM(vc.peso_kg), 0) AS peso
+        FROM viagens v
+        JOIN motoristas m ON m.id = v.motorista_id
+        LEFT JOIN ({cargas_por_viagem}) vc ON vc.viagem_id = v.id
+        GROUP BY m.id ORDER BY peso DESC
+        """
+    ).fetchall()
+
+    grafico = {
+        "caminhoes": {
+            "labels": [filtro_placa(r["placa"]) for r in km_por_caminhao],
+            "km": [_to_float(r["km"]) for r in km_por_caminhao],
+        },
+        "motoristas": {
+            "labels": [r["nome"] for r in peso_por_motorista],
+            "peso": [_to_float(r["peso"]) for r in peso_por_motorista],
+        },
+    }
+
+    produtos = {
+        str(n["id"]): {
+            "peso_kg": _to_float(n["peso_total_kg"]),
+            "cubagem_m3": _to_float(n["volume_total_m3"]),
+            "valor_nf": _to_float(n["valor_total"]),
+        }
+        for n in _notas()
+    }
+
+    caminhoes_lista = _caminhoes()
+    capacidades = {
+        str(c["id"]): {
+            "peso": _to_float(c.get("capacidade_kg"), 0),
+            "cub": _to_float(c.get("cubagem_m3"), 0),
+        }
+        for c in caminhoes_lista
+    }
+
+    primeiro = caminhoes_lista[0] if caminhoes_lista else None
+    capacidade_peso_fallback = _to_float(primeiro.get("capacidade_kg"), 0) if primeiro else 0
+    capacidade_cub_fallback = _to_float(primeiro.get("cubagem_m3"), 0) if primeiro else 0
+
+    return render_template(
+        "resultados_viagens.html",
+        caminhoes=caminhoes_lista,
+        motoristas=_motoristas(),
+        produtos=_notas(),
+        produtos_json=produtos,
+        capacidade_peso=capacidade_peso_fallback,
+        capacidade_cub=capacidade_cub_fallback,
+        capacidades_json=capacidades,
+        dia=dia,
+        hoje=date.today().isoformat(),
+        resumo_dia=resumo_dia,
+        ultimas=ultimas,
+        grafico=grafico,
+    )
+
+
+# ---------------- Manutenção ----------------
+@app.route("/manutencao", methods=["GET"])
+@login_required
+def manutencao_page():
+    db = get_db()
+    lancamentos = _dicts(db.execute(
+        """
+        SELECT mn.*, c.placa, m.nome AS motorista
+        FROM manutencoes mn
+        LEFT JOIN caminhoes c ON c.id = mn.caminhao_id
+        LEFT JOIN motoristas m ON m.id = mn.motorista_id
+        ORDER BY mn.data DESC, mn.id DESC
+        """
+    ).fetchall())
+
+    total_gasto = sum(_to_float(l["custo"]) for l in lancamentos)
+    pendentes = sum(1 for l in lancamentos if l["status"] == "Pendente")
+    fornecedores = sorted({l["empresa"] for l in lancamentos if l["empresa"]})
+
+    return render_template(
+        "resultados_manutencao.html",
+        caminhoes=_caminhoes(),
+        motoristas=_motoristas(),
+        pecas=["Pneu", "Pastilha de Freio", "Óleo", "Filtro", "Correia"],
+        status_lista=["Concluído", "Pendente", "Em andamento"],
+        hoje=date.today().isoformat(),
+        lancamentos=lancamentos,
+        total_gasto=total_gasto,
+        pendentes=pendentes,
+        fornecedores=fornecedores,
+    )
+
+
+@app.route("/manutencao/nova", methods=["POST"])
+@login_required
+def nova_manutencao():
+    db = get_db()
+    if not db.execute(
+        "SELECT 1 FROM caminhoes WHERE id = ?", (request.form.get("caminhao_id"),)
+    ).fetchone():
+        flash("Selecione um caminhão válido.", "erro")
+        return redirect(url_for("manutencao_page"))
+    db.execute(
+        "INSERT INTO manutencoes (data, caminhao_id, motorista_id, peca, custo, "
+        "status, numero_os, empresa) VALUES (?,?,?,?,?,?,?,?)",
+        (
+            request.form.get("data"),
+            request.form.get("caminhao_id"),
+            request.form.get("motorista_id") or None,
+            request.form.get("peca"),
+            request.form.get("custo"),
+            request.form.get("status"),
+            request.form.get("numero_os"),
+            request.form.get("empresa"),
+        ),
+    )
+    db.commit()
+    flash("Manutenção registrada.", "ok")
+    return redirect(url_for("manutencao_page"))
+
+
+if __name__ == '__main__':
+    print("\n  Sistema rodando! Abra no navegador:  http://127.0.0.1:5001")
+    print("  Para parar o servidor: Ctrl + C\n")
+    app.run(port=5001, debug=True)

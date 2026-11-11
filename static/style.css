@@ -2,41 +2,26 @@
    PALETA CORPORATIVA MULTINACIONAL
    ============================================================ */
 :root {
-    /* Primárias */
     --cor-primaria: #1F3A5F;
     --cor-primaria-clara: #4A6FA5;
     --cor-primaria-bg: #E8EFF7;
-
-    /* Secundárias */
     --cor-sucesso: #2ECC71;
     --cor-alerta: #F39C12;
     --cor-erro: #E74C3C;
-
-    /* Neutras */
     --cinza-escuro: #1F2937;
     --cinza-medio: #4B5563;
     --cinza-claro: #F3F4F6;
     --branco: #FFFFFF;
-
-    /* Bordas */
     --borda: #D1D5DB;
-
-    /* KPIs */
     --azul: #1F6FEB;
     --verde: #2ECC71;
     --laranja: #F39C12;
     --vermelho: #E74C3C;
-
-    /* Tipografia */
     --fonte-corpo: 'Inter', sans-serif;
     --fonte-titulo: 'Inter', sans-serif;
-
-    /* Fundo e texto */
     --fundo: #F5F7FA;
     --texto: #1F2937;
     --suave: #6B7280;
-
-    /* Tons escuros */
     --escuro: #1F2937;
 }
 
@@ -61,37 +46,86 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 
 /* ============================================================
-   HEADER MULTINACIONAL
+   HEADER, LOGO E DESCRIÇÃO PROFISSIONAL
    ============================================================ */
 .topo {
     background: var(--cor-primaria);
     color: #fff;
-    padding: 14px 24px;
+    padding: 12px 24px;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 10px 24px;
     box-shadow: 0 3px 10px rgba(0,0,0,0.25);
-
-    /* faixa estilo estrada */
     border-bottom: 4px solid transparent;
-    border-image: repeating-linear-gradient(
-        90deg,
-        var(--laranja) 0 26px,
-        transparent 26px 44px
-    ) 1;
+    border-image: repeating-linear-gradient(90deg, var(--laranja) 0 26px, transparent 26px 44px) 1;
+}
+
+.topo-esq {
+    display: flex;
+    align-items: center;
 }
 
 .marca {
-    color: #fff;
+    display: flex;
+    align-items: center;
     text-decoration: none;
-    font-family: var(--fonte-titulo);
-    font-size: 1.35rem;
-    font-weight: 700;
-    letter-spacing: 0.01em;
 }
 
+/* O "Balão" branco ao redor do logo */
+.logo-container {
+    background: #ffffff;
+    padding: 6px 14px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    transition: transform 0.2s ease;
+}
+
+.marca:hover .logo-container {
+    transform: scale(1.03);
+}
+
+/* TAMANHO DO LOGO NO TOPO */
+.logo-topo {
+    height: 45px; 
+    width: auto;
+    display: block;
+}
+
+/* Descrição profissional no meio */
+.frase-efeito {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-grow: 1;
+    justify-content: center;
+    margin: 0 20px;
+}
+
+.tag-sistema {
+    background: var(--laranja);
+    color: var(--escuro);
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+.texto-sistema {
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    border-left: 1px solid rgba(255, 255, 255, 0.3);
+    padding-left: 15px;
+}
+
+/* NAVEGAÇÃO */
 .topo nav {
     display: flex;
     flex-wrap: wrap;
@@ -178,23 +212,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     border-left: 5px solid;
 }
 
-.msg-ok {
-    background: #eafaf1;
-    border-color: var(--verde);
-    color: #1e6b41;
-}
-
-.msg-erro {
-    background: #fdedec;
-    border-color: var(--vermelho);
-    color: #922b21;
-}
-
-.msg-aviso {
-    background: #fef5e7;
-    border-color: var(--laranja);
-    color: #7d5200;
-}
+.msg-ok { background: #eafaf1; border-color: var(--verde); color: #1e6b41; }
+.msg-erro { background: #fdedec; border-color: var(--vermelho); color: #922b21; }
+.msg-aviso { background: #fef5e7; border-color: var(--laranja); color: #7d5200; }
 
 /* ============================================================
    CARDS CORPORATIVOS
@@ -217,6 +237,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .card.cad { border-top-color: var(--azul); }
 .card.op  { border-top-color: var(--verde); }
 .card.man { border-top-color: var(--laranja); }
+.card.viagem { border-top-color: var(--azul); }
 
 .card h2, .card h3 {
     font-family: var(--fonte-titulo);
@@ -247,9 +268,7 @@ input, select {
     color: var(--texto);
 }
 
-input:focus, select:focus {
-    border-color: var(--azul);
-}
+input:focus, select:focus { border-color: var(--azul); }
 
 .par {
     display: grid;
@@ -273,15 +292,19 @@ input:focus, select:focus {
     transition: background-color 0.2s;
 }
 
-.btn-principal {
-    background: var(--verde);
-    color: #fff;
-    width: 100%;
+.btn-principal { background: var(--verde); color: #fff; width: 100%; }
+.btn-principal:hover { background: #27b765; }
+
+.btn-secundario {
+    background: #fff;
+    color: var(--azul);
+    border: 1px solid var(--azul);
+    padding: 8px 14px;
+    font-size: 0.88rem;
+    font-weight: 600;
 }
 
-.btn-principal:hover {
-    background: #27b765;
-}
+.btn-secundario:hover { background: var(--cor-primaria-bg); }
 
 .btn-x {
     background: none;
@@ -293,8 +316,10 @@ input:focus, select:focus {
     padding: 4px 6px;
 }
 
+.btn-x:hover { color: #c0392b; }
+
 /* ============================================================
-   TABELAS CORPORATIVAS
+   TABELAS
    ============================================================ */
 .tabela-wrap { overflow-x: auto; }
 
@@ -318,13 +343,18 @@ th {
     background: #fafcfc;
 }
 
-td.n, th.n {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+
+.tabela-wrap .vazio {
+    text-align: center;
+    color: var(--suave);
+    padding: 24px;
+    font-style: italic;
+    white-space: normal;
 }
 
 /* ============================================================
-   KPIs CORPORATIVOS
+   KPIs
    ============================================================ */
 .kpis {
     display: grid;
@@ -347,21 +377,220 @@ td.n, th.n {
     color: var(--escuro);
 }
 
+.kpi-azul     { background: #e8eff7; }
+.kpi-verde    { background: #eafaf1; }
+.kpi-laranja  { background: #fef5e7; }
+.kpi-vermelho { background: #fdedec; }
+
 /* ============================================================
-   RESPONSIVIDADE
+   STATUS BADGES
    ============================================================ */
-@media (max-width: 560px) {
-    .topo { padding: 12px 16px; }
-    .pagina { padding: 18px 14px 48px; }
-    .par { grid-template-columns: 1fr; }
+.status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: capitalize;
+    letter-spacing: 0.02em;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    * { transition: none !important; }
+.status-em-rota    { background: #e8eff7; color: #1F3A5F; border: 1px solid #c9d8ec; }
+.status-finalizada { background: #eafaf1; color: #1e8449; border: 1px solid #b7e7cc; }
+.status-atrasada   { background: #fdedec; color: #922b21; border: 1px solid #f5c6cb; }
+.status-cancelada  { background: #f3f4f6; color: #6B7280; border: 1px solid #d1d5db; }
+
+/* Status de manutenção */
+.status-concluido    { background: #eafaf1; color: #1e8449; border: 1px solid #b7e7cc; }
+.status-pendente     { background: #fef5e7; color: #9a5b00; border: 1px solid #f8d9a8; }
+.status-em-andamento { background: #e8eff7; color: #1F3A5F; border: 1px solid #c9d8ec; }
+
+/* ============================================================
+   ESG / ODS — Cards
+   ============================================================ */
+.esg-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+    margin-bottom: 8px;
 }
 
-/* ===================== LOGIN ===================== */
+.esg-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 24px 22px;
+    box-shadow: 0 4px 14px rgba(31, 58, 95, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
 
+.esg-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 22px rgba(31, 58, 95, 0.14);
+}
+
+.esg-card h3 {
+    font-family: var(--fonte-titulo);
+    font-size: 1.15rem;
+    color: var(--escuro);
+    margin: 0;
+}
+
+.esg-card p {
+    color: var(--cinza-medio);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.esg-card-verde { border-top: 5px solid var(--verde); }
+.esg-card-azul  { border-top: 5px solid var(--azul); }
+
+.esg-bolinha {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    margin-bottom: 4px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.esg-card-verde .esg-bolinha { background: linear-gradient(135deg, #2ECC71, #27ae60); color: #fff; }
+.esg-card-azul .esg-bolinha  { background: linear-gradient(135deg, #1F6FEB, #1F3A5F); color: #fff; }
+
+.esg-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+
+.esg-tag {
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+}
+
+.tag-verde { background: #eafaf1; color: #1e8449; border: 1px solid #b7e7cc; }
+.tag-azul  { background: var(--cor-primaria-bg); color: #1F3A5F; border: 1px solid #c9d8ec; }
+
+/* Animações ESG */
+.esg-card.esg-hidden { opacity: 0; transform: translateY(24px) scale(0.98); }
+.esg-card.esg-show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.esg-card.esg-show:hover {
+    transform: translateY(-5px) scale(1.01);
+    box-shadow: 0 12px 28px rgba(31, 58, 95, 0.18);
+}
+
+@keyframes esgPulse {
+    0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.45); }
+    50%  { transform: scale(1.08); box-shadow: 0 0 0 8px rgba(46, 204, 113, 0); }
+    100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+}
+.esg-tag.esg-pulse { animation: esgPulse 0.7s ease-out; }
+
+/* ============================================================
+   TELA DE VIAGENS
+   ============================================================ */
+.form-viagem { display: grid; gap: 24px; }
+
+.viagem-secao {
+    border: 1px solid var(--borda);
+    border-radius: 10px;
+    padding: 16px 18px 8px;
+    background: #fbfcfe;
+    margin: 0;
+}
+
+.viagem-secao legend {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--cor-primaria);
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.viagem-secao legend i { color: var(--azul); }
+
+.viagem-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 6px;
+}
+
+.cargas-toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.cargas-lista { display: grid; gap: 12px; }
+
+.carga {
+    background: #fff;
+    border: 1px solid var(--borda);
+    border-left: 4px solid var(--azul);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: grid;
+    gap: 10px;
+    transition: box-shadow 0.2s;
+}
+
+.carga:hover { box-shadow: 0 3px 10px rgba(31, 58, 95, 0.08); }
+
+.carga-header { display: flex; justify-content: space-between; align-items: center; }
+.carga-num { font-weight: 700; color: var(--cor-primaria); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.carga-campos { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
+.carga label { margin-bottom: 0; }
+.carga-info { color: var(--suave); font-size: 0.82rem; display: block; padding: 6px 0 0; border-top: 1px dashed var(--borda); }
+
+/* ============================================================
+   PAINEL DE OCUPAÇÃO
+   ============================================================ */
+.ocupacao {
+    background: #fff;
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-top: 16px;
+    display: grid;
+    gap: 12px;
+    transition: opacity 0.2s;
+}
+
+.ocupacao-linha { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; color: var(--cinza-medio); }
+.ocupacao-linha strong { color: var(--escuro); font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+.ocupacao-linha i { color: var(--azul); margin-right: 4px; }
+
+.barra { background: #eef2f7; height: 10px; border-radius: 999px; overflow: hidden; margin-top: -6px; }
+.barra-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--azul), #4A6FA5); border-radius: 999px; transition: width 0.35s ease, background 0.3s ease; }
+.barra-fill.alerta  { background: linear-gradient(90deg, #F39C12, #e67e22); }
+.barra-fill.excesso { background: linear-gradient(90deg, #E74C3C, #c0392b); }
+
+.aviso-ocupacao { margin: 0; padding: 10px 14px; border-radius: 6px; font-size: 0.88rem; font-weight: 600; border-left: 4px solid; }
+.aviso-ocupacao.aviso-erro { background: #fdedec; color: #922b21; border-left-color: var(--vermelho); }
+.aviso-ocupacao.aviso-info { background: #fef5e7; color: #7d5200; border-left-color: var(--laranja); }
+
+.acoes-form { display: flex; justify-content: flex-end; }
+.acoes-form .btn-principal { width: auto; padding: 12px 24px; font-size: 1rem; }
+.filtro-dia { display: flex; gap: 8px; align-items: center; }
+.filtro-dia input { margin-top: 0; width: auto; }
+.grafico-card { padding: 18px 20px; }
+.grafico-card h3 { margin-bottom: 12px; font-size: 1rem; }
+.grafico-card canvas { max-height: 260px; }
+
+/* ============================================================
+   TELA DE LOGIN E LOGO DO LOGIN
+   ============================================================ */
 .login-body {
     display: flex;
     align-items: center;
@@ -382,29 +611,22 @@ td.n, th.n {
     box-shadow: 0 4px 15px rgba(0,0,0,0.35);
 }
 
+.logo-login {
+    width: 100%;
+    max-width: 280px;
+    height: auto;
+    margin: 0 auto 15px auto;
+    display: block;
+}
+
 .login-box h1 {
     margin-top: 0;
     font-family: var(--fonte-titulo);
     color: var(--escuro);
 }
 
-.icone-logo {
-    font-size: 3.5rem;
-    color: var(--azul);
-    margin-bottom: 15px;
-}
-
-.mensagens-login {
-    margin-bottom: 20px;
-    text-align: left;
-}
-
-.form-login label {
-    display: block;
-    text-align: left;
-    font-weight: 600;
-    margin-bottom: 12px;
-}
+.mensagens-login { margin-bottom: 20px; text-align: left; }
+.form-login label { display: block; text-align: left; font-weight: 600; margin-bottom: 12px; }
 
 .form-login input {
     width: 100%;
@@ -416,12 +638,35 @@ td.n, th.n {
     margin-bottom: 22px;
 }
 
-.form-login input:focus {
-    border-color: var(--azul);
+.form-login input:focus { border-color: var(--azul); }
+.form-login button { padding: 12px; font-size: 1.05rem; }
+
+/* ============================================================
+   RESPONSIVIDADE
+   ============================================================ */
+
+/* Esconde a descrição em telas médias (tablets) para não quebrar o menu */
+@media (max-width: 1050px) {
+    .frase-efeito { display: none; }
 }
 
-.form-login button {
-    padding: 12px;
-    font-size: 1.05rem;
+@media (max-width: 640px) {
+    .carga-campos { grid-template-columns: 1fr; }
 }
 
+@media (max-width: 560px) {
+    .topo { padding: 12px 16px; justify-content: center; }
+    .pagina { padding: 18px 14px 48px; }
+    .par { grid-template-columns: 1fr; }
+    .acoes-form { justify-content: stretch; }
+    .acoes-form .btn-principal { width: 100%; }
+    .logo-topo { height: 35px; }
+    .logo-login { max-width: 220px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+    .esg-card.esg-hidden { opacity: 1; transform: none; }
+    .esg-card.esg-show   { transition: none; }
+    .esg-tag.esg-pulse   { animation: none; }
+}

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>{% block titulo %}Painel{% endblock %} • Logística Corporativa</title>
+    <title>{% block titulo %}Painel{% endblock %} • Winxcar Logística</title>
 
     <!-- CSS principal -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -14,7 +14,7 @@
 
     <!-- Fonte corporativa -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
 </head>
 
 <body>
@@ -22,29 +22,34 @@
     <!-- ===================== HEADER ===================== -->
     <header class="topo">
         <div class="topo-esq">
+            <!-- Apenas o logo na esquerda -->
             <a class="marca" href="{{ url_for('home') }}">
-                <i class="fas fa-truck-moving"></i>
-                <span>Logística Corporativa</span>
+                <div class="logo-container">
+                    <img src="{{ url_for('static', filename='logo.jpeg') }}" alt="Winxcar Logística" class="logo-topo">
+                </div>
             </a>
         </div>
 
+        <!-- Descrição profissional no meio -->
+        <div class="frase-efeito">
+            <span class="tag-sistema">SISTEMA DE GESTÃO</span>
+            <span class="texto-sistema">Logística & Transporte de Frota</span>
+        </div>
+
+        <!-- Menu na direita -->
         <nav class="menu">
             <a href="{{ url_for('home') }}" class="item {{ 'ativo' if request.endpoint == 'home' }}">
                 <i class="fas fa-home"></i> Início
             </a>
-
             <a href="{{ url_for('cadastros') }}" class="item {{ 'ativo' if request.endpoint == 'cadastros' }}">
                 <i class="fas fa-folder-plus"></i> Cadastros
             </a>
-
             <a href="{{ url_for('viagens_page') }}" class="item {{ 'ativo' if request.endpoint == 'viagens_page' }}">
                 <i class="fas fa-route"></i> Viagens
             </a>
-
             <a href="{{ url_for('manutencao_page') }}" class="item {{ 'ativo' if request.endpoint == 'manutencao_page' }}">
                 <i class="fas fa-tools"></i> Manutenção
             </a>
-
             <a href="{{ url_for('logout') }}" class="item sair">
                 <i class="fas fa-sign-out-alt"></i> Sair
             </a>
@@ -72,6 +77,3 @@
 
 </body>
 </html>
-
-
-

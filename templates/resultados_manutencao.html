@@ -150,7 +150,7 @@
                     <td>{{ l.numero_os or '-' }}</td>
 
                     <td>
-                        <span class="status status-{{ l.status|lower }}">
+                        <span class="status status-{{ l.status|slug }}">
                             {{ l.status }}
                         </span>
                     </td>

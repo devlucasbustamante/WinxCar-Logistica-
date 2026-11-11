@@ -34,29 +34,43 @@
 <!-- ===================== ESG / ODS ===================== -->
 <h2 class="secao"><i class="fas fa-globe-americas"></i> Metas ESG e ODS Alcançadas</h2>
 
-<div class="fases fases-dashboard">
+<div class="esg-grid">
 
-    <div class="fase fase-verde">
-        <strong><i class="fas fa-leaf"></i> Sustentabilidade Ambiental</strong>
-        <span>
-            Viagens com rotas otimizadas e ocupação máxima de cubagem para menor emissão de carbono por viagem.
-            <br><br>
-            <span class="badge ods3">ODS 3</span>
-            <span class="badge ods13">ODS 13</span>
-        </span>
-    </div>
+    <article class="esg-card esg-card-verde">
+        <div class="esg-bolinha">
+            <i class="fas fa-leaf"></i>
+        </div>
+        <h3>Sustentabilidade Ambiental</h3>
+        <p>
+            Viagens com rotas otimizadas e ocupação máxima de cubagem
+            para menor emissão de carbono por viagem.
+        </p>
+        <div class="esg-tags">
+            <span class="esg-tag tag-verde">ODS 3</span>
+            <span class="esg-tag tag-verde">ODS 13</span>
+        </div>
+    </article>
 
-    <div class="fase fase-azul">
-        <strong><i class="fas fa-industry"></i> Gestão de Manutenção</strong>
-        <span>
-            Checklists preventivos rigorosos garantem a segurança viária e o aumento da vida útil dos pneus e peças.
-            <br><br>
-            <span class="badge ods8">ODS 8</span>
-            <span class="badge ods9">ODS 9</span>
-            <span class="badge ods12">ODS 12</span>
-        </span>
-    </div>
+    <article class="esg-card esg-card-azul">
+        <div class="esg-bolinha">
+            <i class="fas fa-industry"></i>
+        </div>
+        <h3>Gestão de Manutenção</h3>
+        <p>
+            Checklists preventivos rigorosos garantem a segurança viária
+            e o aumento da vida útil dos pneus e peças.
+        </p>
+        <div class="esg-tags">
+            <span class="esg-tag tag-azul">ODS 8</span>
+            <span class="esg-tag tag-azul">ODS 9</span>
+            <span class="esg-tag tag-azul">ODS 12</span>
+        </div>
+    </article>
 
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='esg.js') }}"></script>
 {% endblock %}
